@@ -118,5 +118,23 @@ router.post("/oppose/post", async (req, res) => {
         });
     }
 });
+
+//获取用户的帖子信息
+router.get("/user/posts", async (req, res) => {
+    //要求内容：user_id
+    const user_id = req.query.user_id;
+    try {
+        let target = await tool.db.post.find({ user_id });
+        res.status(200).send({
+            msg: "获取成功",
+            data: target,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "获取失败",
+            err,
+        });
+    }
+})
 //导出路由
 module.exports = router;
