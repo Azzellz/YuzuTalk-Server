@@ -93,9 +93,9 @@ router.post("/support/post", async (req, res) => {
         });
     } catch (err) {
         res.status(403).send({
-            msg:"点赞失败",
-            err
-        })
+            msg: "点赞失败",
+            err,
+        });
     }
 });
 
@@ -119,6 +119,52 @@ router.post("/oppose/post", async (req, res) => {
     }
 });
 
+//收藏文章的接口
+router.post("/favorite/post", async (req, res) => {
+    //要求内容：post_id,user_id
+    const { post_id, user_id } = req.body;
+    try {
+        let targetPost = await tool.db.post.findById(post_id);
+        let targetUser = await tool.db.user.findById(user_id);
+        targetUser.favorites.push(targetPost);
+        targetUser.save();
+        res.status(200).send({
+            msg: "收藏成功",
+            data: targetPost,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "收藏失败",
+            err,
+        });
+    }
+});
+
+//取消收藏文章的接口
+router.post("/unfavorite/post", async (req, res) => {
+    //要求内容：post_id,user_id
+    const { post_id, user_id } = req.body;
+    try {
+        let targetPost = await tool.db.post.findById(post_id);
+        let targetUser = await tool.db.user.findById(user_id);
+        //这里有个小坑,文档对象的_id是一个对象,而post_id是一个字符串,所以要转换一下
+        targetUser.favorites = targetUser.favorites.filter(
+            (post) => post._id.toString() !== post_id
+        );
+
+        targetUser.save();
+        res.status(200).send({
+            msg: "收藏成功",
+            data: targetPost,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "收藏失败",
+            err,
+        });
+    }
+});
+
 //获取用户的帖子信息
 router.get("/user/posts", async (req, res) => {
     //要求内容：user_id
@@ -135,6 +181,6 @@ router.get("/user/posts", async (req, res) => {
             err,
         });
     }
-})
+});
 //导出路由
 module.exports = router;

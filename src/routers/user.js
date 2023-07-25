@@ -14,8 +14,11 @@ router.post(
         //组装注册信息
         const registerInfo = {
             ...req.body,
+            //todo:后期把favorites抽离到前端传来的数据中,此时因为el-upload的特殊性,无法直接把favorites传过来
+            favorites: [], //收藏的帖子,初始为空数组
             avatar: req.avatar, //这个字段是通过中间件拿到的
         };
+        
 
         try {
             //查询数据库中是否有重复用户:由于mongoose的查询方法返回的是一个promise对象且只支持单独查询
@@ -29,6 +32,7 @@ router.post(
                 }),
             ]);
             //存在非空结果,说明有重复用户,抛出错误
+            console.log(results.find((u) => u !== null));
             if (results.find((u) => u !== null)) throw "用户名或账号已存在";
             //组装user对象
             var user = {
