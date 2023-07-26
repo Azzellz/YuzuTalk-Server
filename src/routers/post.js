@@ -182,5 +182,23 @@ router.get("/user/posts", async (req, res) => {
         });
     }
 });
+
+//获取用户收藏的帖子
+router.get('/user/favorites',async (req,res)=>{
+    //要求内容：user_id
+    const user_id = req.query.user_id;
+    try {
+        let target = await tool.db.user.findById(user_id);
+        res.status(200).send({
+            msg: "获取成功",
+            data: target.favorites,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "获取失败",
+            err,
+        });
+    }
+})
 //导出路由
 module.exports = router;

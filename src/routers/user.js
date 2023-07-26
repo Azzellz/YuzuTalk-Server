@@ -102,5 +102,22 @@ router.post("/login", async (req, res) => {
     }
 });
 
+router.get("/user",async (req,res)=>{
+    //获取用户信息
+    const id = req.query.id;
+    try{
+        const data = await tool.db.user.findById(id);
+        res.status(200).send({
+            msg:"获取用户信息成功",
+            data,
+        })
+    }catch(err){
+        res.status(403).send({
+            msg:"获取用户信息失败",
+            err,
+        })
+    }
+})
+
 //导出路由
 module.exports = router;
