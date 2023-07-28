@@ -35,7 +35,8 @@ const User = new Schema({
     account: String,
     password: String,
     avatar: String, //头像
-    favorites:Array,//收藏的帖子
+    favorites:[Post],//收藏的文章,子文档数组
+    published:[Post],//发布的文章,子文档数组
     register_time: String, //注册时间
     time_stamp: Number,
 });
@@ -46,8 +47,8 @@ const user = mongoose.model("user", User);
 module.exports = {
     user,
     post,
-    //统计集合中的文档数量
-    countCollection(name){
-        return db.collection(name).countDocuments()
+    //统计集合中的文档数量,接收一个集合名作为参数
+    countCollection(name,filter){
+        return db.collection(name).countDocuments(filter)
     }
 };

@@ -14,11 +14,8 @@ router.post(
         //组装注册信息
         const registerInfo = {
             ...req.body,
-            //todo:后期把favorites抽离到前端传来的数据中,此时因为el-upload的特殊性,无法直接把favorites传过来
-            favorites: [], //收藏的帖子,初始为空数组
             avatar: req.avatar, //这个字段是通过中间件拿到的
         };
-        
 
         try {
             //查询数据库中是否有重复用户:由于mongoose的查询方法返回的是一个promise对象且只支持单独查询
@@ -56,9 +53,9 @@ router.post(
                 },
             });
         } catch (err) {
-            res.status(403).send({ 
-                msg:"注册失败",
-                err 
+            res.status(403).send({
+                msg: "注册失败",
+                err,
             });
         }
     }
@@ -96,28 +93,59 @@ router.post("/login", async (req, res) => {
         });
     } catch (err) {
         res.status(403).send({
-            msg:"登录失败",
+            msg: "登录失败",
             err,
         });
     }
 });
 
-router.get("/user",async (req,res)=>{
+router.get("/user", async (req, res) => {
     //获取用户信息
     const id = req.query.id;
-    try{
-        const data = await tool.db.user.findById(id);
+    const pageSize = +(req.query.limit || 10); //默认每页显示10条记录
+    const skip = +req.query.skip; //分页跳过
+    const keyword = req.query.keyword; //搜索关键字
+    const filter =
+        //按照四个搜索字段进行正则匹配,这里要使用$or操作符来实现或条件查询,不用$and
+        [
+            { "published.title": { $regex: keyword, $options: "i" } },
+            { "published.content": { $regex: keyword, $options: "i" } },
+            { "published.user_name": { $regex: keyword, $options: "i" } },
+            { "published.tags": { $regex: keyword, $options: "i" } },
+            { "favorites.title": { $regex: keyword, $options: "i" } },
+            { "favorites.content": { $regex: keyword, $options: "i" } },
+            { "favorites.user_name": { $regex: keyword, $options: "i" } },
+            { "favorites.tags": { $regex: keyword, $options: "i" } },
+        ];
+        
+    try {
+        //获取根据分页过滤的用户信息
+        const user = await tool.db.user
+            .findById(id)
+            .slice("published", [skip, pageSize])
+            .slice("favorites", [skip, pageSize])
+            .or(filter);
+        //获取原始用户信息
+        const originUser = await tool.db.user.findById(id).or(filter);
+        //获取发布总数和收藏总数
+        const publishedTotal = originUser ? originUser.published.length : 0;
+        const favoritesTotal = originUser ? originUser.favorites.length : 0;
         res.status(200).send({
-            msg:"获取用户信息成功",
-            data,
-        })
-    }catch(err){
+            msg: "获取用户信息成功",
+            data: {
+                user,
+                publishedTotal,
+                favoritesTotal,
+            },
+        });
+    } catch (err) {
+        console.log(err);
         res.status(403).send({
-            msg:"获取用户信息失败",
+            msg: "获取用户信息失败",
             err,
-        })
+        });
     }
-})
+});
 
 //导出路由
 module.exports = router;
