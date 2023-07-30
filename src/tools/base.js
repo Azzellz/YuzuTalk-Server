@@ -35,8 +35,18 @@ const User = new Schema({
     account: String,
     password: String,
     avatar: String, //头像
-    favorites:[Post],//收藏的文章,子文档数组
-    published:[Post],//发布的文章,子文档数组
+    favorites: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: "post",
+        },
+    ], //收藏的文章,引用数组
+    published: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: "post",
+        },
+    ], //发布的文章,子文档数组
     register_time: String, //注册时间
     time_stamp: Number,
 });
@@ -44,11 +54,30 @@ const User = new Schema({
 const post = mongoose.model("post", Post);
 const user = mongoose.model("user", User);
 
+//绑定自定义方法
+//过滤user文档实例的两个post数组,接收一个正则表达式作为参数
+function filterUserPosts(filter, user) {
+    function filterKeyword(posts) {
+        return posts.filter(
+            (p) =>
+                filter.test(p.title) ||
+                filter.test(p.content) ||
+                (p.tags ? p.tags.some((t) => filter.test(t)) : false) ||
+                filter.test(p.user_name)
+        );
+    }
+    user.favorites = filterKeyword(user.favorites);
+    user.published = filterKeyword(user.published);
+}
+//根据filter统计集合中的文档数量,接收一个集合名和一个过滤器作为参数
+function countCollection(name, filter) {
+    return db.collection(name).countDocuments(filter);
+}
+
 module.exports = {
     user,
     post,
     //统计集合中的文档数量,接收一个集合名作为参数
-    countCollection(name,filter){
-        return db.collection(name).countDocuments(filter)
-    }
+    countCollection,
+    filterUserPosts,
 };
