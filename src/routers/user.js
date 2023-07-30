@@ -99,37 +99,37 @@ router.post("/login", async (req, res) => {
     }
 });
 
+//获取用户信息
 router.get("/user", async (req, res) => {
-    //获取用户信息
+
     const id = req.query.id;
     const pageSize = +(req.query.limit || 10); //默认每页显示10条记录
     const skip = +req.query.skip; //分页跳过
     const keyword = req.query.keyword; //搜索关键字
-    const filter =
-        //按照四个搜索字段进行正则匹配,这里要使用$or操作符来实现或条件查询,不用$and
-        [
-            { "published.title": { $regex: keyword, $options: "i" } },
-            { "published.content": { $regex: keyword, $options: "i" } },
-            { "published.user_name": { $regex: keyword, $options: "i" } },
-            { "published.tags": { $regex: keyword, $options: "i" } },
-            { "favorites.title": { $regex: keyword, $options: "i" } },
-            { "favorites.content": { $regex: keyword, $options: "i" } },
-            { "favorites.user_name": { $regex: keyword, $options: "i" } },
-            { "favorites.tags": { $regex: keyword, $options: "i" } },
-        ];
-        
+    const filter = new RegExp(keyword, "i");
+
     try {
         //获取根据分页过滤的用户信息
         const user = await tool.db.user
             .findById(id)
+            .populate("published favorites") //!填充字段,从而获取发布和收藏的文章信息
             .slice("published", [skip, pageSize])
-            .slice("favorites", [skip, pageSize])
-            .or(filter);
+            .slice("favorites", [skip, pageSize]);
+        //!实现对两个数组字段的正则匹配
+        tool.db.filterUserPosts(filter, user);
         //获取原始用户信息
-        const originUser = await tool.db.user.findById(id).or(filter);
+        const originUser = await tool.db.user
+            .findById(id)
+            .populate("published favorites");
         //获取发布总数和收藏总数
-        const publishedTotal = originUser ? originUser.published.length : 0;
-        const favoritesTotal = originUser ? originUser.favorites.length : 0;
+        let publishedTotal = 0,
+            favoritesTotal = 0;
+        tool.db.filterUserPosts(filter, originUser);
+        if (originUser) {
+            publishedTotal = originUser.published.length;
+            favoritesTotal = originUser.favorites.length;
+        }
+
         res.status(200).send({
             msg: "获取用户信息成功",
             data: {
