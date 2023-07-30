@@ -29,6 +29,7 @@ router.post(
                 }),
             ]);
             //存在非空结果,说明有重复用户,抛出错误
+            console.log(results.find((u) => u !== null));
             if (results.find((u) => u !== null)) throw "用户名或账号已存在";
             //组装user对象
             var user = {
@@ -52,9 +53,9 @@ router.post(
                 },
             });
         } catch (err) {
-            res.status(403).send({ 
-                msg:"注册失败",
-                err 
+            res.status(403).send({
+                msg: "注册失败",
+                err,
             });
         }
     }
@@ -92,7 +93,55 @@ router.post("/login", async (req, res) => {
         });
     } catch (err) {
         res.status(403).send({
-            msg:"登录失败",
+            msg: "登录失败",
+            err,
+        });
+    }
+});
+
+router.get("/user", async (req, res) => {
+    //获取用户信息
+    const id = req.query.id;
+    const pageSize = +(req.query.limit || 10); //默认每页显示10条记录
+    const skip = +req.query.skip; //分页跳过
+    const keyword = req.query.keyword; //搜索关键字
+    const filter =
+        //按照四个搜索字段进行正则匹配,这里要使用$or操作符来实现或条件查询,不用$and
+        [
+            { "published.title": { $regex: keyword, $options: "i" } },
+            { "published.content": { $regex: keyword, $options: "i" } },
+            { "published.user_name": { $regex: keyword, $options: "i" } },
+            { "published.tags": { $regex: keyword, $options: "i" } },
+            { "favorites.title": { $regex: keyword, $options: "i" } },
+            { "favorites.content": { $regex: keyword, $options: "i" } },
+            { "favorites.user_name": { $regex: keyword, $options: "i" } },
+            { "favorites.tags": { $regex: keyword, $options: "i" } },
+        ];
+        
+    try {
+        //获取根据分页过滤的用户信息
+        const user = await tool.db.user
+            .findById(id)
+            .slice("published", [skip, pageSize])
+            .slice("favorites", [skip, pageSize])
+            .or(filter);
+        //获取原始用户信息
+        const originUser = await tool.db.user.findById(id).or(filter);
+        //获取发布总数和收藏总数
+        const publishedTotal = originUser ? originUser.published.length : 0;
+        const favoritesTotal = originUser ? originUser.favorites.length : 0;
+        res.status(200).send({
+            msg: "获取用户信息成功",
+            data: {
+                user,
+                publishedTotal,
+                favoritesTotal,
+            },
+        });
+    } catch (err) {
+        console.log(err);
+        res.status(403).send({
+            msg: "获取用户信息失败",
             err,
         });
     }
