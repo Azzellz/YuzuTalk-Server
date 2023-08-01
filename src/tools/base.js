@@ -25,6 +25,8 @@ const Post = new Schema({
     oppose: Number, //帖子反对数
     comments: Array, //帖子评论,应该是一个对象数组,每个对象包含评论人的id,评论人的用户名,评论人的头像,评论内容,评论时间
     isShowContent: Boolean, //是否显示正文
+    isCommentable: Boolean, //是否启动评论区
+    isUnknown: Boolean, //是否匿名发布
     index: Number, //文章索引
     format_time: String, //格式化的发布时间
     time_stamp: Number, //发布时间戳

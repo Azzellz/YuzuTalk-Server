@@ -75,7 +75,10 @@ router.get("/posts", async (req, res) => {
     //实现分页功能
     const pageSize = req.query.limit || 10; //默认每页显示10条记录
     const skip = req.query.skip; //分页跳过
-    const keyword = req.query.keyword; //搜索关键字
+    const keyword = req.query.keyword.replace(
+        /[\^\$\.\*\+\?\=\!\:\|\\\/\(\)\[\]\{\}\,]/g,
+        "\\$&"
+    ); //搜索关键字,要转义正则特殊字符
     const filter = {
         //按照四个搜索字段进行正则匹配,这里要使用$or操作符来实现或条件查询,不用$and
         $or: [
@@ -246,6 +249,27 @@ router.get("/user/favorites", async (req, res) => {
         res.status(200).send({
             msg: "获取成功",
             data: target.favorites,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "获取失败",
+            err,
+        });
+    }
+});
+
+//检查是否收藏了某个帖子
+router.post("/user/isfavorite", async (req, res) => {
+    //需要前端提供post_id,user_id
+    const { post_id, user_id } = req.body;
+    try {
+        const user = await tool.db.user.findById(user_id);
+        const isFavorite = user.favorites.some(
+            (post) => post._id.toString() === post_id
+        );
+        res.status(200).send({
+            msg: "获取成功",
+            data: isFavorite,
         });
     } catch (err) {
         res.status(403).send({

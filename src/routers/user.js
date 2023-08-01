@@ -101,11 +101,14 @@ router.post("/login", async (req, res) => {
 
 //获取用户信息
 router.get("/user", async (req, res) => {
-
     const id = req.query.id;
     const pageSize = +(req.query.limit || 10); //默认每页显示10条记录
     const skip = +req.query.skip; //分页跳过
-    const keyword = req.query.keyword; //搜索关键字
+    const keyword = req.query.keyword.replace(
+        /[\^\$\.\*\+\?\=\!\:\|\\\/\(\)\[\]\{\}\,]/g,
+        "\\$&"
+    ); //搜索关键字,需要转义
+
     const filter = new RegExp(keyword, "i");
 
     try {
