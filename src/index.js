@@ -11,7 +11,8 @@ app.use(
     express.urlencoded({ extended: true }),
     express.static("../public")
 );
-app.use(middleWares.checkLoginToken, middleWares.CORS);
+//!跨域中间件必须第一个配置,不然异步中间件可能会提前发送响应
+app.use(middleWares.CORS,middleWares.checkLoginToken);
 
 //配置路由器
 app.use(routers.user);

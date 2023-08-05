@@ -1,25 +1,37 @@
 const tokenTool = require("../tools/token.js");
 const fs = require("fs");
 const path = require("path");
+const tool = require("../tools");
 module.exports = {
     //检查请求中是否携带Token,若携带则验证
-    checkLoginToken(req, res, next) {
+    async checkLoginToken(req, res, next) {
         if (req.url == "/login" && req.headers.authorization) {
-            req.hasToken = true;
             const token = req.headers.authorization;
-            tokenTool
-                .checkToken(token)
-                .then((data) => {
-                    res.status(200).send({
-                        msg: "Token验证成功",
-                        data,
-                    });
-                })
-                .catch((err) => {
-                    res.status(403).send({
-                        err: "Token验证失败,请重新登录",
-                    });
+            if (token) req.hasToken = true;
+            const user_id = req.body.user_id;
+            //先验证是否存在此用户
+            try {
+                await tool.db.user.findById(user_id);
+            } catch (err) {
+                res.status(403).send({
+                    msg: "用户不存在",
+                    err,
                 });
+                return next();
+            }
+            //验证token是否正确
+            try {
+                const data = await tokenTool.checkToken(token);
+                res.status(200).send({
+                    msg: "Token验证成功",
+                    data,
+                });
+            } catch (err) {
+                res.status(403).send({
+                    msg: "Token验证失败,请重新登录",
+                    err,
+                });
+            }
         }
         next();
     },
@@ -28,12 +40,7 @@ module.exports = {
         const extendName = req.file.originalname.split(".")[1];
         const destination = req.file.destination;
         const fileName = req.file.filename;
-        const oldFileName = path.join(
-            __dirname,
-            "../",
-            destination,
-            fileName
-        );
+        const oldFileName = path.join(__dirname, "../", destination, fileName);
         const newFileName = path.join(
             __dirname,
             "../",

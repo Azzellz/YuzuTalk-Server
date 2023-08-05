@@ -155,18 +155,54 @@ router.get("/user/recent", async (req, res) => {
     //应该只保留少部分信息发给前端
     try {
         //获取最近注册的用户信息,只包含部分字段对象的数组
-        const data = await tool.db.user.find().select("user_name avatar _id")
+        const data = await tool.db.user.find().select("user_name avatar _id");
         res.status(200).send({
             msg: "获取最近用户信息成功",
-            data
-        })
+            data,
+        });
     } catch (err) {
         res.status(403).send({
             msg: "获取最近用户信息失败",
-            err
-        })
+            err,
+        });
     }
-})
+});
+
+//注销用户
+router.delete("/user", async (req, res) => {
+    try {
+        const deleted_user_id = req.query.id;
+        const user = await tool.db.user.findByIdAndDelete(deleted_user_id);
+        res.status(200).send({
+            msg: "注销成功",
+            data: user,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "注销用户失败",
+            err,
+        });
+    }
+});
+
+//更新用户信息
+router.put("/user", async (req, res) => {
+    try {
+        const user = req.body;
+        const data = await tool.db.user.updateOne({ _id: user._id }, user, {
+            new: true,
+        });
+        res.status(200).send({
+            msg: "更新用户信息成功",
+            data,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "更新用户信息失败",
+            err,
+        });
+    }
+});
 
 //导出路由
 module.exports = router;
