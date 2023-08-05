@@ -150,5 +150,23 @@ router.get("/user", async (req, res) => {
     }
 });
 
+//获取最近的用户信息
+router.get("/user/recent", async (req, res) => {
+    //应该只保留少部分信息发给前端
+    try {
+        //获取最近注册的用户信息,只包含部分字段对象的数组
+        const data = await tool.db.user.find().select("user_name avatar _id")
+        res.status(200).send({
+            msg: "获取最近用户信息成功",
+            data
+        })
+    } catch (err) {
+        res.status(403).send({
+            msg: "获取最近用户信息失败",
+            err
+        })
+    }
+})
+
 //导出路由
 module.exports = router;

@@ -109,6 +109,27 @@ router.get("/posts", async (req, res) => {
     }
 });
 
+//获取最新的文章列表
+router.get("/posts/lastest", async (req, res) => {
+    try {
+        //获取最新的10篇文章,按照每篇文章的时间戳来排序
+        const lastestPosts = await tool.db.post
+            .find()
+            .sort({ time_stamp: -1 })
+            .limit(10);
+
+        res.status(200).send({
+            msg: "获取成功",
+            data: lastestPosts,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "获取失败",
+            err,
+        });
+    }
+});
+
 //发布评论
 router.post("/comment", async (req, res) => {
     //组装comment对象
