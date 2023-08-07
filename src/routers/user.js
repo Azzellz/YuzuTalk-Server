@@ -102,7 +102,7 @@ router.post("/login", async (req, res) => {
 //获取用户信息
 router.get("/user", async (req, res) => {
     const id = req.query.id;
-    const pageSize = +(req.query.limit || 10); //默认每页显示10条记录
+    const limit = +(req.query.limit || 10); //默认每页显示10条记录
     const skip = +req.query.skip; //分页跳过
     const keyword = req.query.keyword.replace(
         /[\^\$\.\*\+\?\=\!\:\|\\\/\(\)\[\]\{\}\,]/g,
@@ -115,9 +115,29 @@ router.get("/user", async (req, res) => {
         //获取根据分页过滤的用户信息
         const user = await tool.db.user
             .findById(id)
-            .populate("published favorites") //!填充字段,从而获取发布和收藏的文章信息
-            .slice("published", [skip, pageSize])
-            .slice("favorites", [skip, pageSize]);
+            //!填充二级嵌套字段,从而获取发布和收藏的文章信息
+            .populate({
+                path: "published",
+                populate: {
+                    path: "user",
+                    model: "user",
+                },
+                options: {
+                    limit,
+                    skip,
+                },
+            })
+            .populate({
+                path: "favorites",
+                populate: {
+                    path: "user",
+                    model: "user",
+                },
+                options: {
+                    limit,
+                    skip,
+                },
+            });
         //!实现对两个数组字段的正则匹配
         tool.db.filterUserPosts(filter, user);
         //获取原始用户信息
@@ -190,9 +210,11 @@ router.put("/user", async (req, res) => {
     try {
         const user = req.body;
         //!要先检查是否有重复信息的用户,若有则抛出错误
-        const result = await tool.db.user.findOne({user_name:user.user_name})
-        if (result) throw "用户名已存在"
-        
+        const result = await tool.db.user.findOne({
+            user_name: user.user_name,
+        });
+        if (result) throw "用户名已存在";
+
         const data = await tool.db.user.updateOne({ _id: user._id }, user, {
             new: true,
         });

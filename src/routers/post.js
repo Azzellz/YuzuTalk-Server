@@ -13,10 +13,14 @@ router.post("/post", async (req, res) => {
     const user_id = req.body.user_id;
 
     try {
+        //根据user_id查询用户
+        const user = await tool.db.user.findById(user_id);
+        // const userObj = user.toObject(); //转换为普通js对象
         //组装post对象
         var post = {
+            user, //填充user
             //前端传来的数据在req.body中
-            ...req.body,
+            ...req.body.post, //这里的post是前端传来的post对象
             //添加额外信息:文章创建时间,文章索引,时间戳
             index: await tool.db.countCollection("posts"),
             format_time: tool.time.getCurrentTime(),
@@ -25,9 +29,6 @@ router.post("/post", async (req, res) => {
 
         //将post添加到数据库
         const data = await tool.db.post.create(post);
-
-        //获取发布post的用户的实例(这里要放在创建post后面,因为要用到post的_id)
-        const user = await tool.db.user.findById(user_id);
         //将post添加到用户的published数组中
         user.published.push(data);
         //保存用户
@@ -84,19 +85,21 @@ router.get("/posts", async (req, res) => {
         $or: [
             { title: { $regex: keyword, $options: "i" } },
             { content: { $regex: keyword, $options: "i" } },
-            { user_name: { $regex: keyword, $options: "i" } },
+            // { user_name: { $regex: keyword, $options: "i" } },
             { tags: { $regex: keyword, $options: "i" } },
         ],
     };
     try {
         //find()不传参默认找全部文档
+        const posts = await tool.db.post
+            .find(filter)
+            .populate("user", ["user_name", "avatar"]) //填充user集合中的指定字段,减轻请求压力
+            .limit(pageSize)
+            .skip(skip);
         res.status(200).send({
             msg: "获取成功",
             data: {
-                posts: await tool.db.post
-                    .find(filter)
-                    .limit(pageSize)
-                    .skip(skip),
+                posts,
                 total: await tool.db.countCollection("posts", filter), //记录总数
             },
         });
@@ -115,6 +118,7 @@ router.get("/posts/lastest", async (req, res) => {
         //获取最新的10篇文章,按照每篇文章的时间戳来排序
         const lastestPosts = await tool.db.post
             .find()
+            .populate("user",["user_name","avatar"]) //填充user集合中的指定字段,减轻请求压力
             .sort({ time_stamp: -1 })
             .limit(10);
 
@@ -248,7 +252,7 @@ router.get("/user/posts", async (req, res) => {
     //要求内容：user_id
     const user_id = req.query.user_id;
     try {
-        let target = await tool.db.post.find({ user_id });
+        const target = await tool.db.post.find({ user: user_id });
         res.status(200).send({
             msg: "获取成功",
             data: target,
