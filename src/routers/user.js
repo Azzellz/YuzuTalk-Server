@@ -113,7 +113,7 @@ router.get("/user", async (req, res) => {
 
     try {
         //获取根据分页过滤的用户信息
-        const user = await tool.db.user
+        const originUserQuery = tool.db.user
             .findById(id)
             //!填充二级嵌套字段,从而获取发布和收藏的文章信息
             .populate({
@@ -122,10 +122,6 @@ router.get("/user", async (req, res) => {
                     path: "user",
                     model: "user",
                 },
-                options: {
-                    limit,
-                    skip,
-                },
             })
             .populate({
                 path: "favorites",
@@ -133,25 +129,19 @@ router.get("/user", async (req, res) => {
                     path: "user",
                     model: "user",
                 },
-                options: {
-                    limit,
-                    skip,
-                },
             });
-        //!实现对两个数组字段的正则匹配
-        tool.db.filterUserPosts(filter, user);
-        //获取原始用户信息
-        const originUser = await tool.db.user
-            .findById(id)
-            .populate("published favorites");
-        //获取发布总数和收藏总数
-        let publishedTotal = 0,
-            favoritesTotal = 0;
-        tool.db.filterUserPosts(filter, originUser);
-        if (originUser) {
-            publishedTotal = originUser.published.length;
-            favoritesTotal = originUser.favorites.length;
-        }
+        //!这里需要调用clone方法,因为query只能被执行一次,否则会报错
+        //先获取总数,再获取分页数据
+        const orginUser = await originUserQuery.clone();
+        orginUser.filterPosts(filter);
+        const publishedTotal = orginUser.published.length;
+        const favoritesTotal = orginUser.favorites.length;
+        //获取分页切割的数据
+        const user = await originUserQuery
+            .clone()
+            .slice("published", [skip, limit])
+            .slice("favorites", [skip, limit]);
+        user.filterPosts(filter);
 
         res.status(200).send({
             msg: "获取用户信息成功",
@@ -218,6 +208,7 @@ router.put("/user", async (req, res) => {
         const data = await tool.db.user.updateOne({ _id: user._id }, user, {
             new: true,
         });
+
         res.status(200).send({
             msg: "更新用户信息成功",
             data,

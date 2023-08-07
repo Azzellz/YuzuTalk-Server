@@ -1,4 +1,5 @@
-const db = require("./base.js");
+// const db = require("./base.js");
+const db = require("./db/index.js");
 const time = require("./time.js");
 const token = require("./token.js");
 
