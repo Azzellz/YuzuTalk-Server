@@ -189,6 +189,10 @@ router.delete("/user", async (req, res) => {
 router.put("/user", async (req, res) => {
     try {
         const user = req.body;
+        //!要先检查是否有重复信息的用户,若有则抛出错误
+        const result = await tool.db.user.findOne({user_name:user.user_name})
+        if (result) throw "用户名已存在"
+        
         const data = await tool.db.user.updateOne({ _id: user._id }, user, {
             new: true,
         });
