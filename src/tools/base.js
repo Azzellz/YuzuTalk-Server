@@ -15,9 +15,10 @@ const Schema = mongoose.Schema;
 //todo  Schema都用默认生成的_id字段,不用再额外添加id字段
 //Post集合的字段
 const Post = new Schema({
-    user_id: String, //发布帖子的用户id
-    user_name: String, //发布帖子的用户名
-    avatar: String, //发布帖子的用户的头像
+    user: {
+        type: Schema.Types.ObjectId,
+        ref: "user",
+    },//发布人
     title: String, //帖子标题
     content: String, //帖子正文
     tags: Array, //帖子标签
