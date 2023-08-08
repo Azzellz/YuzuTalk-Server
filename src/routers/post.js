@@ -71,6 +71,23 @@ router.put("/post", async (req, res) => {
     }
 });
 
+//删除文章
+router.delete("/post", async (req, res) => {
+    const post_id = req.query.post_id;
+    try {
+        const data = await tool.db.post.findByIdAndDelete(post_id);
+        res.status(200).send({
+            msg: "删除成功",
+            data,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "删除失败",
+            err,
+        });
+    }
+});
+
 //获取文章列表(已添加分页功能)
 router.get("/posts", async (req, res) => {
     //实现分页功能
@@ -118,7 +135,7 @@ router.get("/posts/lastest", async (req, res) => {
         //获取最新的10篇文章,按照每篇文章的时间戳来排序
         const lastestPosts = await tool.db.post
             .find()
-            .populate("user",["user_name","avatar"]) //填充user集合中的指定字段,减轻请求压力
+            .populate("user", ["user_name", "avatar"]) //填充user集合中的指定字段,减轻请求压力
             .sort({ time_stamp: -1 })
             .limit(10);
 

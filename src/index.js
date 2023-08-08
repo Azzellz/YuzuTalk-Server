@@ -19,5 +19,5 @@ app.use(routers.user);
 app.use(routers.post);
 
 app.listen(4000, () => {
-    console.log("The server listen on port 4000 yes! ");
+    console.log("The server listen on port 4000! ");
 });
