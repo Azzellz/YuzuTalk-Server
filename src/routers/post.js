@@ -226,7 +226,9 @@ router.post("/favorite/post", async (req, res) => {
         let targetPost = await tool.db.post.findById(post_id);
         let targetUser = await tool.db.user.findById(user_id);
         targetUser.favorites.push(targetPost);
+        targetPost.follow++;
         await targetUser.save();
+        await targetPost.save();
         res.status(200).send({
             msg: "收藏成功",
             data: targetPost,
@@ -250,8 +252,11 @@ router.post("/unfavorite/post", async (req, res) => {
         targetUser.favorites = targetUser.favorites.filter(
             (post) => post._id.toString() !== post_id
         );
+        targetPost.follow--;
 
         await targetUser.save();
+        await targetPost.save();
+        
         res.status(200).send({
             msg: "收藏成功",
             data: targetPost,

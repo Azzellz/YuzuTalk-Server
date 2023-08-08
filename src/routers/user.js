@@ -230,7 +230,19 @@ router.put("/user/follow", async (req, res) => {
     const { user_id, follow_id } = req.body;
     try {
         const currentUser = await tool.db.user.findById(user_id);
-        const followUser = await tool.db.user.findById(friend_id);
+        //先检查是否已经关注过了
+        const isFollowed = currentUser.follows.some((item)=>{
+            return item._id.toString() === follow_id
+        })
+        // console.log(isFollowed)
+        if (isFollowed){
+            return res.status(403).send({
+                msg: "已关注该用户",
+                err:""
+            });
+        } ;
+
+        const followUser = await tool.db.user.findById(follow_id);
         //加关注,得粉丝
         currentUser.follows.push(followUser);
         followUser.fans.push(currentUser);
@@ -248,6 +260,67 @@ router.put("/user/follow", async (req, res) => {
         });
     }
 });
+
+//取消关注
+router.put("/user/unFollow", async (req, res) => {
+    const { user_id, follow_id } = req.body;
+    try {
+        const currentUser = await tool.db.user.findById(user_id);
+        //先检查是否已经关注过了
+        const isFollowed = currentUser.follows.some((item)=>{
+            return item._id.toString() === follow_id
+        })
+        // console.log(isFollowed)
+        if (!isFollowed){
+            return res.status(403).send({
+                msg: "未关注该用户",
+                err:""
+            });
+        } ;
+
+        const followUser = await tool.db.user.findById(follow_id);
+
+        currentUser.follows=currentUser.follows.filter((item) => {
+            return item._id.toString() !== follow_id;
+        });
+        followUser.fans=currentUser.fans.filter((item) => {
+            return item._id.toString() !== user_id;
+        })
+
+        await currentUser.save();
+        await followUser.save();
+
+        res.status(200).send({
+            msg: "取关成功",
+            data: currentUser.follows,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "取关失败",
+            err,
+        });
+    }
+});
+
+//是否关注用户
+router.get("/user/isFollow", async (req, res) => {
+    const { user_id, follow_id } = req.query;
+    try {
+        const currentUser = await tool.db.user.findById(user_id);
+        const isFollowed = currentUser.follows.some((item)=>{
+            return item._id.toString() === follow_id
+        })
+        res.status(200).send({
+            msg: "查询成功",
+            data: isFollowed,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "查询失败",
+            err,
+        });
+    }
+})
 
 //导出路由
 module.exports = router;
