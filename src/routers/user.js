@@ -103,18 +103,22 @@ router.post("/login", async (req, res) => {
 router.get("/user", async (req, res) => {
     const id = req.query.id;
     const limit = +(req.query.limit || 10); //默认每页显示10条记录
-    const skip = +req.query.skip; //分页跳过
-    const keyword = req.query.keyword.replace(
-        /[\^\$\.\*\+\?\=\!\:\|\\\/\(\)\[\]\{\}\,]/g,
-        "\\$&"
-    ); //搜索关键字,需要转义
+    const skip = +(req.query.skip || 0); //分页跳过
+    const keyword = req.query.keyword
+        ? req.query.keyword.replace(
+              /[\^\$\.\*\+\?\=\!\:\|\\\/\(\)\[\]\{\}\,]/g,
+              "\\$&"
+          )
+        : ""; //搜索关键字,需要转义
 
     const filter = new RegExp(keyword, "i");
+    //判断是否请求的是其他用户的数据,如果是则隐藏密码字段
+    const shadowFields = req.query.isOther ? ["-password"] : ""; //需要隐藏的字段:密码
 
     try {
         //获取根据分页过滤的用户信息
         const originUserQuery = tool.db.user
-            .findById(id)
+            .findById(id, shadowFields)
             //!填充二级嵌套字段,从而获取发布和收藏的文章信息
             .populate({
                 path: "published",
@@ -216,6 +220,30 @@ router.put("/user", async (req, res) => {
     } catch (err) {
         res.status(403).send({
             msg: "更新用户信息失败",
+            err,
+        });
+    }
+});
+
+//关注用户
+router.put("/user/follow", async (req, res) => {
+    const { user_id, follow_id } = req.body;
+    try {
+        const currentUser = await tool.db.user.findById(user_id);
+        const followUser = await tool.db.user.findById(friend_id);
+        //加关注,得粉丝
+        currentUser.follows.push(followUser);
+        followUser.fans.push(currentUser);
+        await currentUser.save();
+        await followUser.save();
+
+        res.status(200).send({
+            msg: "关注成功",
+            data: currentUser.follows,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "关注失败",
             err,
         });
     }

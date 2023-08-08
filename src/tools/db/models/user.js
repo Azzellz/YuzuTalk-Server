@@ -19,6 +19,18 @@ const User = new Schema(
                 ref: "post",
             },
         ],
+        follows: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "user",
+            },
+        ],
+        fans: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "user",
+            },
+        ],
         register_time: String,
         time_stamp: Number,
     },
