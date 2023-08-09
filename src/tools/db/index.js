@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Post = require("./models/post");
 const User = require("./models/user");
+const Comment = require("./models/comment");
 
 //连接数据库
 mongoose.connect("mongodb://127.0.0.1/posts");
@@ -29,6 +30,7 @@ function countCollection(name, filter) {
 module.exports = {
     user,
     post,
+    Comment,//类是大写的
     //统计集合中的文档数量,接收一个集合名作为参数
     countCollection,
 };

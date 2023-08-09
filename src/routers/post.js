@@ -111,6 +111,14 @@ router.get("/posts", async (req, res) => {
         const posts = await tool.db.post
             .find(filter)
             .populate("user", ["user_name", "avatar"]) //填充user集合中的指定字段,减轻请求压力
+            .populate({
+                path: "comments.user",
+                select: ["user_name", "avatar","_id"],
+            }) //填充comments集合中的指向user的引用的指定字段,减轻请求压力
+            .populate({
+                path: "comments.post",
+                select: "_id",
+            }) //填充comments集合中的指向post的引用,减轻请求压力
             .limit(pageSize)
             .skip(skip);
         res.status(200).send({
@@ -136,6 +144,14 @@ router.get("/posts/lastest", async (req, res) => {
         const lastestPosts = await tool.db.post
             .find()
             .populate("user", ["user_name", "avatar"]) //填充user集合中的指定字段,减轻请求压力
+            .populate({
+                path: "comments.user",
+                select: ["user_name", "avatar", "_id"],
+            }) //填充comments集合中的指向user的引用的指定字段,减轻请求压力
+            .populate({
+                path: "comments.post",
+                select: "_id",
+            }) //填充comments集合中的指向post的引用,减轻请求压力
             .sort({ time_stamp: -1 })
             .limit(10);
 
@@ -155,7 +171,7 @@ router.get("/posts/lastest", async (req, res) => {
 router.post("/comment", async (req, res) => {
     //组装comment对象
     const comment = {
-        //要求内容：post_id,comment_id(由前端自己生成),user_id,user_name,avatar,content
+        //要求内容：post(id),user(id),content,oppose,support
         ...req.body,
         //添加额外信息:评论时间,时间戳
         format_time: tool.time.getCurrentTime(),
@@ -163,7 +179,7 @@ router.post("/comment", async (req, res) => {
     };
     //先找到post_id对应的文章
     try {
-        let targetPost = await tool.db.post.findById(comment.post_id); //根据post_id找到对应的文章
+        let targetPost = await tool.db.post.findById(comment.post); //根据post_id找到对应的文章
         targetPost.comments.push(comment); //将评论添加到文章的comments数组中
         await targetPost.save(); //保存文章
         res.status(200).send({
@@ -171,12 +187,79 @@ router.post("/comment", async (req, res) => {
             data: comment,
         });
     } catch (err) {
+        console.log(err)
         res.status(403).send({
             msg: "评论失败",
             err,
         });
     }
 });
+
+//给评论点赞的接口
+router.put("/post/comment/support",async (req,res)=>{
+    const {comment_id,post_id} = req.body;
+    try{
+        const targetPost = await tool.db.post.findById(post_id);
+        //遍历查找对应的评论
+        let isFindComment = false;
+        
+        targetPost.comments.forEach(comment=>{
+            //!注意ObjectId类型不能直接比较,要转换成字符串
+            if(comment._id.toString() === comment_id){
+                //找到对应的评论,给评论点赞
+                comment.support++;
+                isFindComment=true;
+            }
+        })
+        
+        if (!isFindComment) throw "没有找到对应评论"
+        //保存文章
+        await targetPost.save();
+        res.status(200).send({
+            msg:"点赞成功",
+            data:""
+        })
+    }catch(err){
+        console.log(err)
+        res.status(403).send({
+            msg:"点赞失败",
+            err
+        })
+    }
+})
+
+//给评论点踩的接口
+router.put("/post/comment/oppose",async (req,res)=>{
+    const {comment_id,post_id} = req.body;
+    try{
+        const targetPost = await tool.db.post.findById(post_id);
+        //遍历查找对应的评论
+        let isFindComment = false;
+        
+        targetPost.comments.forEach(comment=>{
+            //!注意ObjectId类型不能直接比较,要转换成字符串
+            if(comment._id.toString() === comment_id){
+                //找到对应的评论,给评论点赞
+                comment.oppose++;
+                isFindComment=true;
+            }
+        })
+        
+        if (!isFindComment) throw "没有找到对应评论"
+        //保存文章
+        await targetPost.save();
+        res.status(200).send({
+            msg:"点踩成功",
+            data:""
+        })
+    }catch(err){
+        console.log(err)
+        res.status(403).send({
+            msg:"点踩失败",
+            err
+        })
+    }
+})
 
 //给帖子点赞的接口
 router.post("/support/post", async (req, res) => {
