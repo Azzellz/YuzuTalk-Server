@@ -91,8 +91,8 @@ router.delete("/post", async (req, res) => {
 //获取文章列表(已添加分页功能)
 router.get("/posts", async (req, res) => {
     //实现分页功能
-    const pageSize = req.query.limit || 10; //默认每页显示10条记录
-    const skip = req.query.skip; //分页跳过
+    const limit = req.query.limit || 10; //默认每页显示10条记录
+    const skip = req.query.skip || 0; //分页跳过
     const keyword = req.query.keyword.replace(
         /[\^\$\.\*\+\?\=\!\:\|\\\/\(\)\[\]\{\}\,]/g,
         "\\$&"
@@ -110,7 +110,7 @@ router.get("/posts", async (req, res) => {
         //find()不传参默认找全部文档
         const posts = await tool.db.post
             .find(filter)
-            .populate("user", ["user_name", "avatar"]) //填充user集合中的指定字段,减轻请求压力
+            .populate("user", ["user_name", "avatar","_id"]) //填充user集合中的指定字段,减轻请求压力
             .populate({
                 path: "comments.user",
                 select: ["user_name", "avatar","_id"],
@@ -119,7 +119,7 @@ router.get("/posts", async (req, res) => {
                 path: "comments.post",
                 select: "_id",
             }) //填充comments集合中的指向post的引用,减轻请求压力
-            .limit(pageSize)
+            .limit(limit)
             .skip(skip);
         res.status(200).send({
             msg: "获取成功",

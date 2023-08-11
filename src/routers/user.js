@@ -5,7 +5,7 @@ const middleWares = require("../middlewares");
 const uploadAvatar = multer({ dest: "../public/user_avatar" });
 //生成路由器
 const router = express.Router();
-//注册逻辑
+//!注册逻辑
 router.post(
     "/register",
     uploadAvatar.single("avatar"),
@@ -117,7 +117,7 @@ router.get("/user", async (req, res) => {
 
     try {
         //获取根据分页过滤的用户信息
-        const originUserQuery = tool.db.user
+        const user = await tool.db.user
             .findById(id, shadowFields)
             //!填充二级嵌套字段,从而获取发布和收藏的文章信息
             .populate({
@@ -136,16 +136,18 @@ router.get("/user", async (req, res) => {
             });
         //!这里需要调用clone方法,因为query只能被执行一次,否则会报错
         //先获取总数,再获取分页数据
-        const orginUser = await originUserQuery.clone();
-        orginUser.filterPosts(filter);
-        const publishedTotal = orginUser.published.length;
-        const favoritesTotal = orginUser.favorites.length;
-        //获取分页切割的数据
-        const user = await originUserQuery
-            .clone()
-            .slice("published", [skip, limit])
-            .slice("favorites", [skip, limit]);
+
         user.filterPosts(filter);
+        const publishedTotal = user.published.length;
+        const favoritesTotal = user.favorites.length;
+        //获取分页切割的数据
+
+        user.published.splice(0, skip);
+        user.published.splice(limit);
+
+        user.favorites.splice(0, skip);
+        user.favorites.splice(limit);
+
 
         res.status(200).send({
             msg: "获取用户信息成功",
@@ -231,16 +233,16 @@ router.put("/user/follow", async (req, res) => {
     try {
         const currentUser = await tool.db.user.findById(user_id);
         //先检查是否已经关注过了
-        const isFollowed = currentUser.follows.some((item)=>{
-            return item._id.toString() === follow_id
-        })
+        const isFollowed = currentUser.follows.some((item) => {
+            return item._id.toString() === follow_id;
+        });
         // console.log(isFollowed)
-        if (isFollowed){
+        if (isFollowed) {
             return res.status(403).send({
                 msg: "已关注该用户",
-                err:""
+                err: "",
             });
-        } ;
+        }
 
         const followUser = await tool.db.user.findById(follow_id);
         //加关注,得粉丝
@@ -267,25 +269,25 @@ router.put("/user/unFollow", async (req, res) => {
     try {
         const currentUser = await tool.db.user.findById(user_id);
         //先检查是否已经关注过了
-        const isFollowed = currentUser.follows.some((item)=>{
-            return item._id.toString() === follow_id
-        })
+        const isFollowed = currentUser.follows.some((item) => {
+            return item._id.toString() === follow_id;
+        });
         // console.log(isFollowed)
-        if (!isFollowed){
+        if (!isFollowed) {
             return res.status(403).send({
                 msg: "未关注该用户",
-                err:""
+                err: "",
             });
-        } ;
+        }
 
         const followUser = await tool.db.user.findById(follow_id);
 
-        currentUser.follows=currentUser.follows.filter((item) => {
+        currentUser.follows = currentUser.follows.filter((item) => {
             return item._id.toString() !== follow_id;
         });
-        followUser.fans=currentUser.fans.filter((item) => {
+        followUser.fans = currentUser.fans.filter((item) => {
             return item._id.toString() !== user_id;
-        })
+        });
 
         await currentUser.save();
         await followUser.save();
@@ -307,9 +309,9 @@ router.get("/user/isFollow", async (req, res) => {
     const { user_id, follow_id } = req.query;
     try {
         const currentUser = await tool.db.user.findById(user_id);
-        const isFollowed = currentUser.follows.some((item)=>{
-            return item._id.toString() === follow_id
-        })
+        const isFollowed = currentUser.follows.some((item) => {
+            return item._id.toString() === follow_id;
+        });
         res.status(200).send({
             msg: "查询成功",
             data: isFollowed,
@@ -320,7 +322,7 @@ router.get("/user/isFollow", async (req, res) => {
             err,
         });
     }
-})
+});
 
 //导出路由
 module.exports = router;
