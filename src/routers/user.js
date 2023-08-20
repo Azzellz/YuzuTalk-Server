@@ -120,20 +120,32 @@ router.get("/user", async (req, res) => {
         const user = await tool.db.user
             .findById(id, shadowFields)
             //!填充二级嵌套字段,从而获取发布和收藏的文章信息
-            .populate({
-                path: "published",
-                populate: {
-                    path: "user",
-                    model: "user",
+            .populate([
+                {
+                    path: "published",
+                    populate: [
+                        {
+                            path: "user",
+                        },
+                        {
+                            path: "comments.user",
+                            select: "user_name avatar _id",
+                        },
+                    ],
                 },
-            })
-            .populate({
-                path: "favorites",
-                populate: {
-                    path: "user",
-                    model: "user",
+                {
+                    path: "favorites",
+                    populate: [
+                        {
+                            path: "user",
+                        },
+                        {
+                            path: "comments.user",
+                            select: "user_name avatar _id",
+                        },
+                    ],
                 },
-            });
+            ])
         //!这里需要调用clone方法,因为query只能被执行一次,否则会报错
         //先获取总数,再获取分页数据
 
