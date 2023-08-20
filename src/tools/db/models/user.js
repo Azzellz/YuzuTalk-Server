@@ -58,4 +58,11 @@ const User = new Schema(
     }
 );
 
-module.exports = User;
+//用于查询用户信息时的投影
+const SelectUser = {
+    user_name: 1,
+    avatar: 1,
+    _id: 1,
+};
+
+module.exports = { User, SelectUser };

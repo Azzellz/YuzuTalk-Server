@@ -47,5 +47,8 @@ const Post = new Schema({
 },{
     methods:{}//指定实例方法
 });
-
-module.exports = Post;
+//查询投影
+const SelectPost = {
+    _id: 1,
+};
+module.exports = {Post,SelectPost};

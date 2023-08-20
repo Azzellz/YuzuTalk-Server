@@ -3,6 +3,10 @@ const multer = require("multer"); //解析文件的中间件
 const tool = require("../tools");
 const middleWares = require("../middlewares");
 const uploadAvatar = multer({ dest: "../public/user_avatar" });
+
+const selectUser = require("../tools/db/models/user").SelectUser;
+const selectPost = require("../tools/db/models/post").SelectPost;
+
 //生成路由器
 const router = express.Router();
 //!注册逻辑
@@ -110,7 +114,6 @@ router.get("/user", async (req, res) => {
               "\\$&"
           )
         : ""; //搜索关键字,需要转义
-
     const filter = new RegExp(keyword, "i");
     //判断是否请求的是其他用户的数据,如果是则隐藏密码字段
     const shadowFields = req.query.isOther ? ["-password"] : ""; //需要隐藏的字段:密码
@@ -129,7 +132,11 @@ router.get("/user", async (req, res) => {
                         },
                         {
                             path: "comments.user",
-                            select: "user_name avatar _id",
+                            select: selectUser,
+                        },
+                        {
+                            path: "comments.post",
+                            select: selectPost,
                         },
                     ],
                 },
@@ -141,14 +148,20 @@ router.get("/user", async (req, res) => {
                         },
                         {
                             path: "comments.user",
-                            select: "user_name avatar _id",
+                            select: selectUser,
+                        },
+                        {
+                            path: "comments.post",
+                            select: selectPost,
                         },
                     ],
                 },
-            ])
+            ]);
         //!这里需要调用clone方法,因为query只能被执行一次,否则会报错
         //先获取总数,再获取分页数据
 
+        //切割过滤的逻辑
+        //#region
         user.filterPosts(filter);
         const publishedTotal = user.published.length;
         const favoritesTotal = user.favorites.length;
@@ -159,7 +172,7 @@ router.get("/user", async (req, res) => {
 
         user.favorites.splice(0, skip);
         user.favorites.splice(limit);
-
+        //#endregion
 
         res.status(200).send({
             msg: "获取用户信息成功",
@@ -183,7 +196,7 @@ router.get("/user/recent", async (req, res) => {
     //应该只保留少部分信息发给前端
     try {
         //获取最近注册的用户信息,只包含部分字段对象的数组
-        const data = await tool.db.user.find().select("user_name avatar _id");
+        const data = await tool.db.user.find().select(selectUser);
         res.status(200).send({
             msg: "获取最近用户信息成功",
             data,

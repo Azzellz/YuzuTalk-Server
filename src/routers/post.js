@@ -2,6 +2,9 @@ const express = require("express");
 const tool = require("../tools");
 const middleWares = require("../middlewares");
 
+const selectUser = require("../tools/db/models/user").SelectUser;
+const selectPost = require("../tools/db/models/post").SelectPost;
+
 //TODO:写接口的时候一定要解耦
 
 //生成路由器
@@ -88,6 +91,37 @@ router.delete("/post", async (req, res) => {
     }
 });
 
+//根据id获取指定文章
+router.get("/post", async (req, res) => {
+    //要求内容：post_id(id)
+    const id = req.query.id;
+    try {
+        const post = await tool.db.post.findById(id).populate([
+            {
+                path: "user",
+                select: selectUser,
+            },
+            {
+                path: "comments.user",
+                select: selectUser,
+            },
+            {
+                path: "comments.post",
+                select: selectPost,
+            },
+        ]);
+        res.status(200).send({
+            msg: "获取成功",
+            data: post,
+        })
+    } catch (err) {
+        res.status(403).send({
+            msg: "获取失败",
+            err,
+        });
+    }
+});
+
 //获取文章列表(已添加分页功能)
 router.get("/posts", async (req, res) => {
     //实现分页功能
@@ -110,15 +144,20 @@ router.get("/posts", async (req, res) => {
         //find()不传参默认找全部文档
         const posts = await tool.db.post
             .find(filter)
-            .populate("user", ["user_name", "avatar","_id"]) //填充user集合中的指定字段,减轻请求压力
-            .populate({
-                path: "comments.user",
-                select: ["user_name", "avatar","_id"],
-            }) //填充comments集合中的指向user的引用的指定字段,减轻请求压力
-            .populate({
-                path: "comments.post",
-                select: "_id",
-            }) //填充comments集合中的指向post的引用,减轻请求压力
+            .populate([
+                {
+                    path: "user",
+                    select: selectUser,
+                },
+                {
+                    path: "comments.user",
+                    select: selectUser,
+                },
+                {
+                    path: "comments.post",
+                    select: selectPost,
+                },
+            ])
             .limit(limit)
             .skip(skip);
         res.status(200).send({
@@ -143,15 +182,20 @@ router.get("/posts/lastest", async (req, res) => {
         //获取最新的10篇文章,按照每篇文章的时间戳来排序
         const lastestPosts = await tool.db.post
             .find()
-            .populate("user", ["user_name", "avatar"]) //填充user集合中的指定字段,减轻请求压力
-            .populate({
-                path: "comments.user",
-                select: ["user_name", "avatar", "_id"],
-            }) //填充comments集合中的指向user的引用的指定字段,减轻请求压力
-            .populate({
-                path: "comments.post",
-                select: "_id",
-            }) //填充comments集合中的指向post的引用,减轻请求压力
+            .populate([
+                {
+                    path: "user",
+                    select: selectUser,
+                },
+                {
+                    path: "comments.user",
+                    select: selectUser,
+                },
+                {
+                    path: "comments.post",
+                    select: selectPost,
+                },
+            ])
             .sort({ time_stamp: -1 })
             .limit(10);
 
@@ -180,6 +224,7 @@ router.post("/comment", async (req, res) => {
     //先找到post_id对应的文章
     try {
         let targetPost = await tool.db.post.findById(comment.post); //根据post_id找到对应的文章
+        
         targetPost.comments.push(comment); //将评论添加到文章的comments数组中
         await targetPost.save(); //保存文章
         res.status(200).send({
@@ -187,7 +232,7 @@ router.post("/comment", async (req, res) => {
             data: comment,
         });
     } catch (err) {
-        console.log(err)
+        console.log(err);
         res.status(403).send({
             msg: "评论失败",
             err,
@@ -196,70 +241,70 @@ router.post("/comment", async (req, res) => {
 });
 
 //给评论点赞的接口
-router.put("/post/comment/support",async (req,res)=>{
-    const {comment_id,post_id} = req.body;
-    try{
+router.put("/post/comment/support", async (req, res) => {
+    const { comment_id, post_id } = req.body;
+    try {
         const targetPost = await tool.db.post.findById(post_id);
         //遍历查找对应的评论
         let isFindComment = false;
-        
-        targetPost.comments.forEach(comment=>{
+
+        targetPost.comments.forEach((comment) => {
             //!注意ObjectId类型不能直接比较,要转换成字符串
-            if(comment._id.toString() === comment_id){
+            if (comment._id.toString() === comment_id) {
                 //找到对应的评论,给评论点赞
                 comment.support++;
-                isFindComment=true;
+                isFindComment = true;
             }
-        })
-        
-        if (!isFindComment) throw "没有找到对应评论"
+        });
+
+        if (!isFindComment) throw "没有找到对应评论";
         //保存文章
         await targetPost.save();
         res.status(200).send({
-            msg:"点赞成功",
-            data:""
-        })
-    }catch(err){
-        console.log(err)
+            msg: "点赞成功",
+            data: "",
+        });
+    } catch (err) {
+        console.log(err);
         res.status(403).send({
-            msg:"点赞失败",
-            err
-        })
+            msg: "点赞失败",
+            err,
+        });
     }
-})
+});
 
 //给评论点踩的接口
-router.put("/post/comment/oppose",async (req,res)=>{
-    const {comment_id,post_id} = req.body;
-    try{
+router.put("/post/comment/oppose", async (req, res) => {
+    const { comment_id, post_id } = req.body;
+    try {
         const targetPost = await tool.db.post.findById(post_id);
         //遍历查找对应的评论
         let isFindComment = false;
-        
-        targetPost.comments.forEach(comment=>{
+
+        targetPost.comments.forEach((comment) => {
             //!注意ObjectId类型不能直接比较,要转换成字符串
-            if(comment._id.toString() === comment_id){
+            if (comment._id.toString() === comment_id) {
                 //找到对应的评论,给评论点赞
                 comment.oppose++;
-                isFindComment=true;
+                isFindComment = true;
             }
-        })
-        
-        if (!isFindComment) throw "没有找到对应评论"
+        });
+
+        if (!isFindComment) throw "没有找到对应评论";
         //保存文章
         await targetPost.save();
         res.status(200).send({
-            msg:"点踩成功",
-            data:""
-        })
-    }catch(err){
-        console.log(err)
+            msg: "点踩成功",
+            data: "",
+        });
+    } catch (err) {
+        console.log(err);
         res.status(403).send({
-            msg:"点踩失败",
-            err
-        })
+            msg: "点踩失败",
+            err,
+        });
     }
-})
+});
 
 //给帖子点赞的接口
 router.post("/support/post", async (req, res) => {
@@ -339,7 +384,7 @@ router.post("/unfavorite/post", async (req, res) => {
 
         await targetUser.save();
         await targetPost.save();
-        
+
         res.status(200).send({
             msg: "收藏成功",
             data: targetPost,

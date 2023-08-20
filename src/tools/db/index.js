@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-const Post = require("./models/post");
-const User = require("./models/user");
+const Post = require("./models/post").Post;
+const User = require("./models/user").User;
 const Comment = require("./models/comment");
 
 //连接数据库
