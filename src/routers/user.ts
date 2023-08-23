@@ -1,56 +1,64 @@
-const express = require("express");
-const multer = require("multer"); //解析文件的中间件
-const tool = require("../tools");
-const middleWares = require("../middlewares");
+import express from "express";
+import multer from "multer"; //解析文件的中间件
+import db from "../tools/db/index.ts";
+import {
+    RequestWithAvatar,
+    RequestWithToken,
+    tranformAvatarExtend,
+} from "../middlewares/index.ts";
+import { getCurrentTime } from "../tools/time.ts";
 const uploadAvatar = multer({ dest: "../public/user_avatar" });
-
-const selectUser = require("../tools/db/models/user").SelectUser;
-const selectPost = require("../tools/db/models/post").SelectPost;
+import { SelectPost } from "../tools/db/models/post/schema/post.ts";
+import { SelectUser } from "../tools/db/models/user/schema/user.ts";
+import { setToken } from "../tools/token.ts";
+import { I_User } from "../tools/db/models/user/interface/user.ts";
 
 //生成路由器
-const router = express.Router();
+export const router = express.Router();
 //!注册逻辑
 router.post(
     "/register",
     uploadAvatar.single("avatar"),
-    middleWares.tranformAvatarExtend,
+    tranformAvatarExtend,
     async (req, res) => {
         //组装注册信息
+        //处理过后的请求对象
+        const afterRequest = req as RequestWithAvatar;
         const registerInfo = {
             ...req.body,
-            avatar: req.avatar, //这个字段是通过中间件拿到的
+            avatar: afterRequest.avatar, //这个字段是通过中间件拿到的
         };
 
         try {
             //查询数据库中是否有重复用户:由于mongoose的查询方法返回的是一个promise对象且只支持单独查询
             //所以可以使用Promise.all来遍历Promise数组来同时查询用户名和账号是否重复
             const results = await Promise.all([
-                tool.db.user.findOne({
+                db.user.findOne({
                     user_name: registerInfo.user_name,
                 }),
-                tool.db.user.findOne({
+                db.user.findOne({
                     account: registerInfo.account,
                 }),
             ]);
             //存在非空结果,说明有重复用户,抛出错误
-            console.log(results.find((u) => u !== null));
+            // console.log(results.find((u) => u !== null));
             if (results.find((u) => u !== null)) throw "用户名或账号已存在";
             //组装user对象
-            var user = {
+            const user = {
                 ...registerInfo,
                 //添加额外信息
-                register_time: tool.time.getCurrentTime(),
+                register_time: getCurrentTime(),
                 time_stamp: Date.now(),
             };
             //添加至数据库
-            const data = await tool.db.user.create(user);
+            const data = await db.user.create(user);
             //发送响应给客户端
             res.status(200).send({
                 msg: "注册成功",
                 data: {
-                    ...data._doc, //注意要加上_doc
+                    ...(data as any)._doc, //注意要加上_doc
                     //用username生成token
-                    token: await tool.token.setToken({
+                    token: await setToken({
                         user_name: data.user_name,
                         user_id: data._id,
                     }),
@@ -68,19 +76,21 @@ router.post(
 //登录校验
 router.post("/login", async (req, res) => {
     //判断是否已经通过token中间件的校验
-    if (req.hasToken) return;
+    const afterRequest = req as RequestWithToken;
+    console.log(afterRequest.hasToken);
+    if (afterRequest.hasToken) return;
     //获取登录信息
     const loginInfo = req.body;
 
     try {
         //校验账号密码是否正确,若正确则登录成功并且返回token和用户信息,不存在则返回错误信息提示账号或者密码错误
-        const data = await tool.db.user.findOne({
+        const data = await db.user.findOne({
             account: loginInfo.account,
             password: loginInfo.password,
         });
         if (!data) throw "账号或密码错误";
         //用username和userid生成token
-        const token = await tool.token.setToken({
+        const token = await setToken({
             user_name: data.user_name,
             user_id: data._id,
         });
@@ -109,7 +119,7 @@ router.get("/user", async (req, res) => {
     const limit = +(req.query.limit || 10); //默认每页显示10条记录
     const skip = +(req.query.skip || 0); //分页跳过
     const keyword = req.query.keyword
-        ? req.query.keyword.replace(
+        ? String(req.query.keyword).replace(
               /[\^\$\.\*\+\?\=\!\:\|\\\/\(\)\[\]\{\}\,]/g,
               "\\$&"
           )
@@ -120,7 +130,7 @@ router.get("/user", async (req, res) => {
 
     try {
         //获取根据分页过滤的用户信息
-        const user = await tool.db.user
+        const user = await db.user
             .findById(id, shadowFields)
             //!填充二级嵌套字段,从而获取发布和收藏的文章信息
             .populate([
@@ -132,11 +142,11 @@ router.get("/user", async (req, res) => {
                         },
                         {
                             path: "comments.user",
-                            select: selectUser,
+                            select: SelectUser,
                         },
                         {
                             path: "comments.post",
-                            select: selectPost,
+                            select: SelectPost,
                         },
                     ],
                 },
@@ -148,21 +158,22 @@ router.get("/user", async (req, res) => {
                         },
                         {
                             path: "comments.user",
-                            select: selectUser,
+                            select: SelectUser,
                         },
                         {
                             path: "comments.post",
-                            select: selectPost,
+                            select: SelectPost,
                         },
                     ],
                 },
             ]);
         //!这里需要调用clone方法,因为query只能被执行一次,否则会报错
         //先获取总数,再获取分页数据
+        if (!user) throw "用户不存在";
 
         //切割过滤的逻辑
         //#region
-        user.filterPosts(filter);
+        (user as any).filterPosts(filter);
         const publishedTotal = user.published.length;
         const favoritesTotal = user.favorites.length;
         //获取分页切割的数据
@@ -196,7 +207,7 @@ router.get("/user/recent", async (req, res) => {
     //应该只保留少部分信息发给前端
     try {
         //获取最近注册的用户信息,只包含部分字段对象的数组
-        const data = await tool.db.user.find().select(selectUser);
+        const data = await db.user.find().select(SelectUser);
         res.status(200).send({
             msg: "获取最近用户信息成功",
             data,
@@ -213,7 +224,7 @@ router.get("/user/recent", async (req, res) => {
 router.delete("/user", async (req, res) => {
     try {
         const deleted_user_id = req.query.id;
-        const user = await tool.db.user.findByIdAndDelete(deleted_user_id);
+        const user = await db.user.findByIdAndDelete(deleted_user_id);
         res.status(200).send({
             msg: "注销成功",
             data: user,
@@ -229,20 +240,24 @@ router.delete("/user", async (req, res) => {
 //更新用户信息
 router.put("/user", async (req, res) => {
     try {
-        const user = req.body;
+        const newUser = req.body;
+        console.log(newUser);
         //!要先检查是否有重复信息的用户,若有则抛出错误
-        const result = await tool.db.user.findOne({
-            user_name: user.user_name,
+        const result = await db.user.findOne({
+            user_name: newUser.user_name,
         });
         if (result) throw "用户名已存在";
 
-        const data = await tool.db.user.updateOne({ _id: user._id }, user, {
-            new: true,
-        });
+        const user = await db.user.findById(newUser._id);
+        if (!user) throw "用户不存在";
+        //只更新指定数据
+        user.user_name = newUser.user_name;
+        user.account = newUser.account;
+        await user.save();
 
         res.status(200).send({
             msg: "更新用户信息成功",
-            data,
+            data: user,
         });
     } catch (err) {
         res.status(403).send({
@@ -256,12 +271,12 @@ router.put("/user", async (req, res) => {
 router.put("/user/follow", async (req, res) => {
     const { user_id, follow_id } = req.body;
     try {
-        const currentUser = await tool.db.user.findById(user_id);
+        const currentUser = await db.user.findById(user_id);
+        if (!currentUser) throw "当前用户不存在";
         //先检查是否已经关注过了
-        const isFollowed = currentUser.follows.some((item) => {
+        const isFollowed = currentUser.follows.some((item: any) => {
             return item._id.toString() === follow_id;
         });
-        // console.log(isFollowed)
         if (isFollowed) {
             return res.status(403).send({
                 msg: "已关注该用户",
@@ -269,10 +284,11 @@ router.put("/user/follow", async (req, res) => {
             });
         }
 
-        const followUser = await tool.db.user.findById(follow_id);
+        const followUser = await db.user.findById(follow_id);
+        if (!followUser) throw "follow用户不存在";
         //加关注,得粉丝
-        currentUser.follows.push(followUser);
-        followUser.fans.push(currentUser);
+        currentUser.follows.push(followUser as any);
+        followUser.fans.push(currentUser as any);
         await currentUser.save();
         await followUser.save();
 
@@ -292,12 +308,12 @@ router.put("/user/follow", async (req, res) => {
 router.put("/user/unFollow", async (req, res) => {
     const { user_id, follow_id } = req.body;
     try {
-        const currentUser = await tool.db.user.findById(user_id);
+        const currentUser = await db.user.findById(user_id);
+        if (!currentUser) throw "当前用户不存在";
         //先检查是否已经关注过了
-        const isFollowed = currentUser.follows.some((item) => {
+        const isFollowed = (currentUser.follows as any).some((item: I_User) => {
             return item._id.toString() === follow_id;
         });
-        // console.log(isFollowed)
         if (!isFollowed) {
             return res.status(403).send({
                 msg: "未关注该用户",
@@ -305,12 +321,15 @@ router.put("/user/unFollow", async (req, res) => {
             });
         }
 
-        const followUser = await tool.db.user.findById(follow_id);
+        const followUser = await db.user.findById(follow_id);
+        if (!followUser) throw "follow用户不存在";
 
-        currentUser.follows = currentUser.follows.filter((item) => {
-            return item._id.toString() !== follow_id;
-        });
-        followUser.fans = currentUser.fans.filter((item) => {
+        currentUser.follows = (currentUser.follows as any).filter(
+            (item: I_User) => {
+                return item._id.toString() !== follow_id;
+            }
+        );
+        followUser.fans = (currentUser.fans as any).filter((item: I_User) => {
             return item._id.toString() !== user_id;
         });
 
@@ -333,8 +352,9 @@ router.put("/user/unFollow", async (req, res) => {
 router.get("/user/isFollow", async (req, res) => {
     const { user_id, follow_id } = req.query;
     try {
-        const currentUser = await tool.db.user.findById(user_id);
-        const isFollowed = currentUser.follows.some((item) => {
+        const currentUser = await db.user.findById(user_id);
+        if (!currentUser) throw "当前用户不存在";
+        const isFollowed = (currentUser.follows as any).some((item: I_User) => {
             return item._id.toString() === follow_id;
         });
         res.status(200).send({
@@ -348,6 +368,3 @@ router.get("/user/isFollow", async (req, res) => {
         });
     }
 });
-
-//导出路由
-module.exports = router;

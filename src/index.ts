@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
 
-const routers = require("./routers");
-const middleWares = require("./middlewares");
+import {router as post} from "./routers/post.ts";
+import { router as user } from "./routers/user.ts";
+import {CORS,checkLoginToken} from "./middlewares/index.ts";
 
 const app = express();
 
@@ -12,11 +13,11 @@ app.use(
     express.static("../public")
 );
 //!跨域中间件必须第一个配置,不然异步中间件可能会提前发送响应
-app.use(middleWares.CORS,middleWares.checkLoginToken);
+app.use(CORS, checkLoginToken);
 
 //配置路由器
-app.use(routers.user);
-app.use(routers.post);
+app.use(user);
+app.use(post);
 
 app.listen(4000, () => {
     console.log("The server listen on port 4000! ");
