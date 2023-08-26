@@ -182,7 +182,7 @@ router.get("/posts", async (req, res) => {
 });
 
 //获取最新的文章列表
-router.get("/posts/lastest", async (req, res) => {
+router.get("/posts/latest", async (req, res) => {
     //获取限制
     const limit = Number(req.query.limit) || 10; //默认10条记录
     try {

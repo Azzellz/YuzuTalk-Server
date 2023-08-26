@@ -116,15 +116,15 @@ router.post("/login", async (req, res) => {
 //获取用户信息
 router.get("/user", async (req, res) => {
     const id = req.query.id;
-    const limit = +(req.query.limit || 10); //默认每页显示10条记录
-    const skip = +(req.query.skip || 0); //分页跳过
-    const keyword = req.query.keyword
-        ? String(req.query.keyword).replace(
-              /[\^\$\.\*\+\?\=\!\:\|\\\/\(\)\[\]\{\}\,]/g,
-              "\\$&"
-          )
-        : ""; //搜索关键字,需要转义
-    const filter = new RegExp(keyword, "i");
+    // const limit = +(req.query.limit || 10); //默认每页显示10条记录
+    // const skip = +(req.query.skip || 0); //分页跳过
+    // const keyword = req.query.keyword
+    //     ? String(req.query.keyword).replace(
+    //           /[\^\$\.\*\+\?\=\!\:\|\\\/\(\)\[\]\{\}\,]/g,
+    //           "\\$&"
+    //       )
+    //     : ""; //搜索关键字,需要转义
+    // const filter = new RegExp(keyword, "i");
     //判断是否请求的是其他用户的数据,如果是则隐藏密码字段
     const shadowFields = req.query.isOther ? ["-password"] : ""; //需要隐藏的字段:密码
 
@@ -133,64 +133,62 @@ router.get("/user", async (req, res) => {
         const user = await db.user
             .findById(id, shadowFields)
             //!填充二级嵌套字段,从而获取发布和收藏的文章信息
-            .populate([
-                {
-                    path: "published",
-                    populate: [
-                        {
-                            path: "user",
-                        },
-                        {
-                            path: "comments.user",
-                            select: SelectUser,
-                        },
-                        {
-                            path: "comments.post",
-                            select: SelectPost,
-                        },
-                    ],
-                },
-                {
-                    path: "favorites",
-                    populate: [
-                        {
-                            path: "user",
-                        },
-                        {
-                            path: "comments.user",
-                            select: SelectUser,
-                        },
-                        {
-                            path: "comments.post",
-                            select: SelectPost,
-                        },
-                    ],
-                },
-            ]);
+            // .populate([
+            //     {
+            //         path: "published",
+            //         populate: [
+            //             {
+            //                 path: "user",
+            //             },
+            //             {
+            //                 path: "comments.user",
+            //                 select: SelectUser,
+            //             },
+            //             {
+            //                 path: "comments.post",
+            //                 select: SelectPost,
+            //             },
+            //         ],
+            //     },
+            //     {
+            //         path: "favorites",
+            //         populate: [
+            //             {
+            //                 path: "user",
+            //             },
+            //             {
+            //                 path: "comments.user",
+            //                 select: SelectUser,
+            //             },
+            //             {
+            //                 path: "comments.post",
+            //                 select: SelectPost,
+            //             },
+            //         ],
+            //     },
+            // ]);
         //!这里需要调用clone方法,因为query只能被执行一次,否则会报错
         //先获取总数,再获取分页数据
         if (!user) throw "用户不存在";
 
-        //切割过滤的逻辑
-        //#region
-        (user as any).filterPosts(filter);
-        const publishedTotal = user.published.length;
-        const favoritesTotal = user.favorites.length;
-        //获取分页切割的数据
+        // //切割过滤的逻辑
+        // //#region
+        // (user as any).filterPosts(filter);
+        // const publishedTotal = user.published.length;
+        // const favoritesTotal = user.favorites.length;
+        // //获取分页切割的数据
 
-        user.published.splice(0, skip);
-        user.published.splice(limit);
+        // user.published.splice(0, skip);
+        // user.published.splice(limit);
 
-        user.favorites.splice(0, skip);
-        user.favorites.splice(limit);
+        // user.favorites.splice(0, skip);
+        // user.favorites.splice(limit);
         //#endregion
 
         res.status(200).send({
             msg: "获取用户信息成功",
             data: {
                 user,
-                publishedTotal,
-                favoritesTotal,
             },
         });
     } catch (err) {

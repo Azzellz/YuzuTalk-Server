@@ -96,5 +96,6 @@ export const User = new Schema<I_User>(
 export const SelectUser = {
     user_name: 1,
     avatar: 1,
+    account:1,
     _id: 1,
 };
