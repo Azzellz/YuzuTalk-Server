@@ -18,7 +18,6 @@ export const router = express.Router();
 router.post("/post", async (req, res) => {
     //获取发布的user_id
     const user_id = req.body.user_id;
-
     try {
         //根据user_id查询用户
         const user = await db.user.findById(user_id);
@@ -41,13 +40,13 @@ router.post("/post", async (req, res) => {
         //保存用户
         await user.save();
 
-        console.log(`成功添加文章：${data}`);
+        // console.log(`成功添加文章：${data}`);
         res.status(200).send({
             msg: "发布成功",
             data,
         });
     } catch (err) {
-        console.log(`添加文章失败：${err}`);
+        // console.log(`添加文章失败：${err}`);
         res.status(403).send({
             msg: "发布失败",
             err,

@@ -2,25 +2,26 @@ import { checkToken } from "../tools/token.ts";
 import fs from "fs";
 import path from "path";
 import { user } from "../tools/db/index.ts";
-import{ Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
+import { color, colors } from "../tools/color.ts";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-//处理过后的req类型
-export interface RequestWithToken extends Request {
-    hasToken: boolean;
-}
-export interface RequestWithAvatar extends Request {
-    avatar: string;
-}
-
+//再esm中获取__dirname全局变量
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 //检查请求中是否携带Token,若携带则验证
-export async function checkLoginToken(req: Request, res: Response, next:NextFunction) {
+export async function checkLoginToken(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
     if (req.url == "/login" && req.headers.authorization) {
         const token = req.headers.authorization;
         //添加额外的属性
-        const tokenRequest = req as RequestWithToken;
-
-        if (token) tokenRequest.hasToken = true;
+        // const tokenRequest = req as RequestWithToken;
+        if (token) req.hasToken = true;
         const user_id = req.body.user_id;
         //先验证是否存在此用户
         try {
@@ -49,7 +50,11 @@ export async function checkLoginToken(req: Request, res: Response, next:NextFunc
     next();
 }
 //改变经过multer处理的头像文件拓展名
-export function tranformAvatarExtend(req: Request, res: Response, next: NextFunction) {
+export function tranformAvatarExtend(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
     const extendName = req.file?.originalname.split(".")[1];
     const destination = req.file?.destination;
     const fileName = req.file?.filename;
@@ -64,8 +69,8 @@ export function tranformAvatarExtend(req: Request, res: Response, next: NextFunc
         if (err) return console.log(err);
     });
     //添加额外的属性
-    const avatarRequest = req as RequestWithAvatar;
-    avatarRequest.avatar = `${fileName}.${extendName}`;
+    // const avatarRequest = req as RequestWithAvatar;
+    req.avatar = `${fileName}.${extendName}`;
     next();
 }
 //配置跨域响应头的中间件
@@ -77,5 +82,36 @@ export function CORS(req: Request, res: Response, next: NextFunction) {
     res.header("Access-Control-Allow-Methods", "*");
     res.header("Content-Type", "application/json;charset=utf-8");
     res.header("Access-Control-Allow-Credentials", "true");
+    next();
+}
+//日志中间件
+export function logger(req: Request, res: Response, next: NextFunction) {
+    const map: Record<string, colors> = {
+        GET: "绿色",
+        POST: "蓝色",
+        PUT: "黄色",
+        DELETE: "红色",
+    };
+    //获取当前毫秒时间戳
+    const start = Date.now();
+    res.on("finish", () => {
+        const end = Date.now();
+        const time = end - start;
+        const log = color(
+            map[req.method],
+            `[${req.method}] ${res.statusCode} ${req.url} ${time}ms`
+        );
+        console.log(log);
+    });
+    next();
+}
+//全局错误处理中间件
+export function errorHandler(
+    err: Error,
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    console.log("server got error:",err);
     next();
 }

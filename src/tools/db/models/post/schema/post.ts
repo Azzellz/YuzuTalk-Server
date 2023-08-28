@@ -1,5 +1,5 @@
 import {Schema} from "mongoose";
-import {I_PostComment,I_Post} from "../interface/post";
+import {I_PostComment,I_Post, SelectedProjection} from "../interface/post";
 //!注意,如果没有使用SchemaType定义的字段,则不会被保存到数据库中,如果发生修改也不会被保存到数据库中
 //!所以如果有嵌套字段,一定要使用SchemaType再定义一个子Schema
 //!注意ObjectId类型不能直接比较,要转换成字符串
@@ -47,6 +47,6 @@ export const Post = new Schema<I_Post>({
 });
 
 //查询投影
-export const SelectPost = {
+export const SelectPost:SelectedProjection = {
     _id: 1,
 };

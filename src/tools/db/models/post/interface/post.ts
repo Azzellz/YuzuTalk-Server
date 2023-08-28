@@ -37,3 +37,8 @@ export interface I_Post extends Document {
     format_time: string;
     time_stamp: number;
 }
+
+//查询投影
+export interface SelectedProjection {
+    [field: string]: 1|0;
+}

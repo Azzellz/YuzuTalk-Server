@@ -1,17 +1,14 @@
 import express from "express";
 import multer from "multer"; //解析文件的中间件
 import db from "../tools/db/index.ts";
-import {
-    RequestWithAvatar,
-    RequestWithToken,
-    tranformAvatarExtend,
-} from "../middlewares/index.ts";
+import { tranformAvatarExtend } from "../middlewares/index.ts";
 import { getCurrentTime } from "../tools/time.ts";
 const uploadAvatar = multer({ dest: "../public/user_avatar" });
 import { SelectPost } from "../tools/db/models/post/schema/post.ts";
 import { SelectUser } from "../tools/db/models/user/schema/user.ts";
 import { setToken } from "../tools/token.ts";
 import { I_User } from "../tools/db/models/user/interface/user.ts";
+import { Request, Response } from "express";
 
 //生成路由器
 export const router = express.Router();
@@ -20,13 +17,13 @@ router.post(
     "/register",
     uploadAvatar.single("avatar"),
     tranformAvatarExtend,
-    async (req, res) => {
+    async (req: Request, res: Response) => {
         //组装注册信息
         //处理过后的请求对象
-        const afterRequest = req as RequestWithAvatar;
+        // const afterRequest = req as RequestWithAvatar;
         const registerInfo = {
             ...req.body,
-            avatar: afterRequest.avatar, //这个字段是通过中间件拿到的
+            avatar: req.avatar, //这个字段是通过中间件拿到的
         };
 
         try {
@@ -74,11 +71,9 @@ router.post(
 );
 
 //登录校验
-router.post("/login", async (req, res) => {
+router.post("/login", async (req: Request, res: Response) => {
     //判断是否已经通过token中间件的校验
-    const afterRequest = req as RequestWithToken;
-    console.log(afterRequest.hasToken);
-    if (afterRequest.hasToken) return;
+    if (req.hasToken) return;
     //获取登录信息
     const loginInfo = req.body;
 
@@ -130,43 +125,42 @@ router.get("/user", async (req, res) => {
 
     try {
         //获取根据分页过滤的用户信息
-        const user = await db.user
-            .findById(id, shadowFields)
-            //!填充二级嵌套字段,从而获取发布和收藏的文章信息
-            // .populate([
-            //     {
-            //         path: "published",
-            //         populate: [
-            //             {
-            //                 path: "user",
-            //             },
-            //             {
-            //                 path: "comments.user",
-            //                 select: SelectUser,
-            //             },
-            //             {
-            //                 path: "comments.post",
-            //                 select: SelectPost,
-            //             },
-            //         ],
-            //     },
-            //     {
-            //         path: "favorites",
-            //         populate: [
-            //             {
-            //                 path: "user",
-            //             },
-            //             {
-            //                 path: "comments.user",
-            //                 select: SelectUser,
-            //             },
-            //             {
-            //                 path: "comments.post",
-            //                 select: SelectPost,
-            //             },
-            //         ],
-            //     },
-            // ]);
+        const user = await db.user.findById(id, shadowFields);
+        //!填充二级嵌套字段,从而获取发布和收藏的文章信息
+        // .populate([
+        //     {
+        //         path: "published",
+        //         populate: [
+        //             {
+        //                 path: "user",
+        //             },
+        //             {
+        //                 path: "comments.user",
+        //                 select: SelectUser,
+        //             },
+        //             {
+        //                 path: "comments.post",
+        //                 select: SelectPost,
+        //             },
+        //         ],
+        //     },
+        //     {
+        //         path: "favorites",
+        //         populate: [
+        //             {
+        //                 path: "user",
+        //             },
+        //             {
+        //                 path: "comments.user",
+        //                 select: SelectUser,
+        //             },
+        //             {
+        //                 path: "comments.post",
+        //                 select: SelectPost,
+        //             },
+        //         ],
+        //     },
+        // ]);
         //!这里需要调用clone方法,因为query只能被执行一次,否则会报错
         //先获取总数,再获取分页数据
         if (!user) throw "用户不存在";
