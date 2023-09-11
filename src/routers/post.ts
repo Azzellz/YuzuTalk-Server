@@ -327,7 +327,7 @@ router.get("/posts/published", async (req, res) => {
 });
 
 //发布评论
-router.post("/comment", async (req, res) => {
+router.post("/post/comment", async (req, res) => {
     //组装comment对象
     const comment = {
         //要求内容：post(id),user(id),content,oppose,support
@@ -439,7 +439,7 @@ router.put("/post/comment/oppose", async (req, res) => {
 });
 
 //给帖子点赞的接口
-router.post("/support/post", async (req, res) => {
+router.put("/post/support", async (req, res) => {
     //要求内容：post_id
     const post_id = req.body.post_id;
     try {
@@ -460,7 +460,7 @@ router.post("/support/post", async (req, res) => {
 });
 
 //给帖子点踩的接口
-router.post("/oppose/post", async (req, res) => {
+router.put("/post/oppose", async (req, res) => {
     //要求内容：post_id
     const post_id = req.body.post_id;
     try {
@@ -481,13 +481,13 @@ router.post("/oppose/post", async (req, res) => {
 });
 
 //收藏文章的接口
-router.post("/favorite/post", async (req, res) => {
+router.put("/post/favorite", async (req, res) => {
     //要求内容：post_id,user_id
     const { post_id, user_id } = req.body;
     try {
         let targetPost = await db.post.findById(post_id);
         let targetUser = await db.user.findById(user_id);
-        if (!targetUser||!targetPost) throw "没有找到对应用户或者文章";
+        if (!targetUser || !targetPost) throw "没有找到对应用户或者文章";
         (targetUser.favorites as any).push(targetPost);
         targetPost.follow++;
         await targetUser.save();
@@ -505,7 +505,7 @@ router.post("/favorite/post", async (req, res) => {
 });
 
 //取消收藏文章的接口
-router.post("/unfavorite/post", async (req, res) => {
+router.put("/post/unfavorite", async (req, res) => {
     //要求内容：post_id,user_id
     const { post_id, user_id } = req.body;
     try {
@@ -533,59 +533,4 @@ router.post("/unfavorite/post", async (req, res) => {
     }
 });
 
-//获取用户的帖子信息
-router.get("/user/posts", async (req, res) => {
-    //要求内容：user_id
-    const user_id = req.query.user_id;
-    try {
-        const target = await db.post.find({ user: user_id });
-        res.status(200).send({
-            msg: "获取成功",
-            data: target,
-        });
-    } catch (err) {
-        res.status(403).send({
-            msg: "获取失败",
-            err,
-        });
-    }
-});
 
-//获取用户收藏的帖子
-router.get("/user/favorites", async (req, res) => {
-    //要求内容：user_id
-    const user_id = req.query.user_id;
-    try {
-        let target = await db.user.findById(user_id);
-        res.status(200).send({
-            msg: "获取成功",
-            data: target?.favorites,
-        });
-    } catch (err) {
-        res.status(403).send({
-            msg: "获取失败",
-            err,
-        });
-    }
-});
-
-//检查是否收藏了某个帖子
-router.post("/user/isfavorite", async (req, res) => {
-    //需要前端提供post_id,user_id
-    const { post_id, user_id } = req.body;
-    try {
-        const user = await db.user.findById(user_id);
-        const isFavorite = (user?.favorites as any).some(
-            (post: I_Post) => post._id.toString() === post_id
-        );
-        res.status(200).send({
-            msg: "获取成功",
-            data: isFavorite,
-        });
-    } catch (err) {
-        res.status(403).send({
-            msg: "获取失败",
-            err,
-        });
-    }
-});

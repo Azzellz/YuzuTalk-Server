@@ -9,12 +9,13 @@ import { SelectUser } from "../tools/db/models/user/schema/user.ts";
 import { setToken } from "../tools/token.ts";
 import { I_User } from "../tools/db/models/user/interface/user.ts";
 import { Request, Response } from "express";
+import { I_Post } from "../tools/db/models/post/interface/post.ts";
 
 //生成路由器
 export const router = express.Router();
 //!注册逻辑
 router.post(
-    "/register",
+    "/user/register",
     uploadAvatar.single("avatar"),
     tranformAvatarExtend,
     async (req: Request, res: Response) => {
@@ -71,7 +72,7 @@ router.post(
 );
 
 //登录校验
-router.post("/login", async (req: Request, res: Response) => {
+router.post("/user/login", async (req: Request, res: Response) => {
     //判断是否已经通过token中间件的校验
     if (req.hasToken) return;
     //获取登录信息
@@ -111,79 +112,40 @@ router.post("/login", async (req: Request, res: Response) => {
 //获取用户信息
 router.get("/user", async (req, res) => {
     const id = req.query.id;
-    // const limit = +(req.query.limit || 10); //默认每页显示10条记录
-    // const skip = +(req.query.skip || 0); //分页跳过
-    // const keyword = req.query.keyword
-    //     ? String(req.query.keyword).replace(
-    //           /[\^\$\.\*\+\?\=\!\:\|\\\/\(\)\[\]\{\}\,]/g,
-    //           "\\$&"
-    //       )
-    //     : ""; //搜索关键字,需要转义
-    // const filter = new RegExp(keyword, "i");
+
     //判断是否请求的是其他用户的数据,如果是则隐藏密码字段
     const shadowFields = req.query.isOther ? ["-password"] : ""; //需要隐藏的字段:密码
 
     try {
         //获取根据分页过滤的用户信息
         const user = await db.user.findById(id, shadowFields);
-        //!填充二级嵌套字段,从而获取发布和收藏的文章信息
-        // .populate([
-        //     {
-        //         path: "published",
-        //         populate: [
-        //             {
-        //                 path: "user",
-        //             },
-        //             {
-        //                 path: "comments.user",
-        //                 select: SelectUser,
-        //             },
-        //             {
-        //                 path: "comments.post",
-        //                 select: SelectPost,
-        //             },
-        //         ],
-        //     },
-        //     {
-        //         path: "favorites",
-        //         populate: [
-        //             {
-        //                 path: "user",
-        //             },
-        //             {
-        //                 path: "comments.user",
-        //                 select: SelectUser,
-        //             },
-        //             {
-        //                 path: "comments.post",
-        //                 select: SelectPost,
-        //             },
-        //         ],
-        //     },
-        // ]);
-        //!这里需要调用clone方法,因为query只能被执行一次,否则会报错
-        //先获取总数,再获取分页数据
         if (!user) throw "用户不存在";
-
-        // //切割过滤的逻辑
-        // //#region
-        // (user as any).filterPosts(filter);
-        // const publishedTotal = user.published.length;
-        // const favoritesTotal = user.favorites.length;
-        // //获取分页切割的数据
-
-        // user.published.splice(0, skip);
-        // user.published.splice(limit);
-
-        // user.favorites.splice(0, skip);
-        // user.favorites.splice(limit);
-        //#endregion
 
         res.status(200).send({
             msg: "获取用户信息成功",
             data: {
                 user,
             },
+        });
+    } catch (err) {
+        console.log(err);
+        res.status(403).send({
+            msg: "获取用户信息失败",
+            err,
+        });
+    }
+});
+
+//获取多个用户
+router.get("/users", async (req, res) => {
+    //获取用户名关键字
+    const userNameKeyword = req.query.userNameKeyword as string;
+    const regex = new RegExp(userNameKeyword, "i");
+    try {
+        const data = await db.user.find({ user_name: regex });
+        res.status(200).send({
+            msg: "获取信息成功",
+            data,
         });
     } catch (err) {
         console.log(err);
@@ -356,6 +318,63 @@ router.get("/user/isFollow", async (req, res) => {
     } catch (err) {
         res.status(403).send({
             msg: "查询失败",
+            err,
+        });
+    }
+});
+
+//获取用户的帖子信息
+router.get("/user/posts", async (req, res) => {
+    //要求内容：user_id
+    const user_id = req.query.user_id;
+    try {
+        const target = await db.post.find({ user: user_id });
+        res.status(200).send({
+            msg: "获取成功",
+            data: target,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "获取失败",
+            err,
+        });
+    }
+});
+
+//获取用户收藏的帖子
+router.get("/user/favorites", async (req, res) => {
+    //要求内容：user_id
+    const user_id = req.query.user_id;
+    try {
+        let target = await db.user.findById(user_id);
+        res.status(200).send({
+            msg: "获取成功",
+            data: target?.favorites,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "获取失败",
+            err,
+        });
+    }
+});
+
+//检查是否收藏了某个帖子
+router.get("/user/isfavorite", async (req, res) => {
+    //需要前端提供post_id,user_id
+    const { post_id, user_id } = req.query;
+    try {
+        const user = await db.user.findById(user_id);
+        const isFavorite = (user?.favorites as any).some(
+            (post: I_Post) => post._id.toString() === post_id
+        );
+        res.status(200).send({
+            msg: "获取成功",
+            data: isFavorite,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "获取失败",
             err,
         });
     }

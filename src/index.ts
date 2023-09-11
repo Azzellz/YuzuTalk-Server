@@ -19,8 +19,7 @@ app.use(
 app.use(CORS, checkLoginToken,logger,errorHandler);
 
 //配置路由器
-app.use(user);
-app.use(post);
+app.use("/api", user, post);
 
 app.listen(4000, () => {
     console.log("The server listen on port 4000! ");

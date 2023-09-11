@@ -17,7 +17,7 @@ export async function checkLoginToken(
     res: Response,
     next: NextFunction
 ) {
-    if (req.url == "/login" && req.headers.authorization) {
+    if (req.url == "/api/user/login" && req.headers.authorization) {
         const token = req.headers.authorization;
         //添加额外的属性
         // const tokenRequest = req as RequestWithToken;
