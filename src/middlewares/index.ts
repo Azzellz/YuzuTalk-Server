@@ -4,12 +4,8 @@ import path from "path";
 import { user } from "../tools/db/index.ts";
 import { Request, Response, NextFunction } from "express";
 import { color, colors } from "../tools/color.ts";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { __dirname } from "../tools/path.ts";
 
-//再esm中获取__dirname全局变量
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 //检查请求中是否携带Token,若携带则验证
 export async function checkLoginToken(

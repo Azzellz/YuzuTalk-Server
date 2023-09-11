@@ -10,6 +10,7 @@ import { setToken } from "../tools/token.ts";
 import { I_User } from "../tools/db/models/user/interface/user.ts";
 import { Request, Response } from "express";
 import { I_Post } from "../tools/db/models/post/interface/post.ts";
+import { readAvatar } from "../tools/image.ts";
 
 //生成路由器
 export const router = express.Router();
@@ -131,6 +132,23 @@ router.get("/user", async (req, res) => {
         console.log(err);
         res.status(403).send({
             msg: "获取用户信息失败",
+            err,
+        });
+    }
+});
+
+//获取用户头像
+router.get("/user/avatar", async (req, res) => {
+    const user_avatar = req.query.avatar as string;
+    try {
+        const data = await readAvatar(user_avatar);
+        res.status(200).send({
+            msg: "获取头像成功",
+            data,
+        });
+    } catch (err) {
+        res.status(403).send({
+            msg: "获取头像失败",
             err,
         });
     }
