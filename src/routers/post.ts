@@ -21,7 +21,6 @@ router.post("/post", async (req, res) => {
     try {
         //根据user_id查询用户
         const user = await db.user.findById(user_id);
-        // const userObj = user.toObject(); //转换为普通js对象
         //组装post对象
         const post = {
             user, //填充user
@@ -35,8 +34,9 @@ router.post("/post", async (req, res) => {
         if (!user) throw "没有找到对应用户";
         //将post添加到数据库
         const data = await db.post.create(post);
-        //将post添加到用户的published数组中
-        user.published.push(data as any);
+        //将post_id添加到用户的published数组中
+        //!注意这里只能加id,不然第一次发布时会出错
+        user.published.push(data._id);
         //保存用户
         await user.save();
 
@@ -505,7 +505,8 @@ router.put("/post/favorite", async (req, res) => {
         let targetPost = await db.post.findById(post_id);
         let targetUser = await db.user.findById(user_id);
         if (!targetUser || !targetPost) throw "没有找到对应用户或者文章";
-        (targetUser.favorites as any).push(targetPost);
+        //注意是引用类型文档,只能push ObjectId
+        targetUser.favorites.push(targetPost._id);
         targetPost.follow++;
         await targetUser.save();
         await targetPost.save();
