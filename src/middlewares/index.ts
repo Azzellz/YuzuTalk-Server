@@ -6,7 +6,6 @@ import { Request, Response, NextFunction } from "express";
 import { color, colors } from "../tools/color.ts";
 import { __dirname } from "../tools/path.ts";
 
-
 //检查请求中是否携带Token,若携带则验证
 export async function checkLoginToken(
     req: Request,
@@ -64,8 +63,6 @@ export function tranformAvatarExtend(
     fs.rename(oldFileName, newFileName, (err) => {
         if (err) return console.log(err);
     });
-    //添加额外的属性
-    // const avatarRequest = req as RequestWithAvatar;
     req.avatar = `${fileName}.${extendName}`;
     next();
 }
@@ -108,6 +105,6 @@ export function errorHandler(
     res: Response,
     next: NextFunction
 ) {
-    console.log("server got error:",err);
+    console.log("server got error:", err);
     next();
 }

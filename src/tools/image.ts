@@ -7,3 +7,5 @@ export async function readAvatar(avatar: string): Promise<Buffer> {
     const buffer = await fs.readFile(filePath);
     return buffer;
 }
+
+

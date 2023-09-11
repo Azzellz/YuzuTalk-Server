@@ -1,9 +1,11 @@
 import express from "express";
 import multer from "multer"; //解析文件的中间件
 import db from "../tools/db/index.ts";
-import { tranformAvatarExtend } from "../middlewares/index.ts";
+import {  tranformAvatarExtend } from "../middlewares/index.ts";
 import { getCurrentTime } from "../tools/time.ts";
-const uploadAvatar = multer({ dest: "../public/user_avatar" });
+const uploadAvatar = multer({
+    dest: "../public/user_avatar",
+});
 import { SelectPost } from "../tools/db/models/post/schema/post.ts";
 import { SelectUser } from "../tools/db/models/user/schema/user.ts";
 import { setToken } from "../tools/token.ts";
@@ -132,23 +134,6 @@ router.get("/user", async (req, res) => {
         console.log(err);
         res.status(403).send({
             msg: "获取用户信息失败",
-            err,
-        });
-    }
-});
-
-//获取用户头像
-router.get("/user/avatar", async (req, res) => {
-    const user_avatar = req.query.avatar as string;
-    try {
-        const data = await readAvatar(user_avatar);
-        res.status(200).send({
-            msg: "获取头像成功",
-            data,
-        });
-    } catch (err) {
-        res.status(403).send({
-            msg: "获取头像失败",
             err,
         });
     }
