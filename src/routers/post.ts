@@ -32,7 +32,7 @@ router.post("/post", async (req, res) => {
             format_time: getCurrentTime(),
             time_stamp: Date.now(),
         };
-        if (!user) throw"没有找到对应用户";
+        if (!user) throw "没有找到对应用户";
         //将post添加到数据库
         const data = await db.post.create(post);
         //将post添加到用户的published数组中
@@ -144,10 +144,14 @@ router.get("/posts", async (req, res) => {
             { tags: { $regex: keyword, $options: "i" } },
         ],
     };
+    //获取时序参数
+    const order = String(req.query.order);
+    const sortType = order === "new" ? -1 : 1;
     try {
         //find()不传参默认找全部文档
         const posts = await db.post
             .find(filter)
+            .sort({ time_stamp: sortType })
             .populate([
                 {
                     path: "user",
@@ -164,6 +168,7 @@ router.get("/posts", async (req, res) => {
             ])
             .limit(limit)
             .skip(skip);
+
         res.status(200).send({
             msg: "获取成功",
             data: {
@@ -230,6 +235,9 @@ router.get("/posts/favorites", async (req, res) => {
           )
         : ""; //搜索关键字,需要转义
     const filter = new RegExp(keyword, "i");
+    //获取时序参数
+    const order = String(req.query.order);
+    const sortType = order === "new" ? -1 : 1;
 
     try {
         const user = await db.user.findById(user_id).populate({
@@ -256,6 +264,10 @@ router.get("/posts/favorites", async (req, res) => {
         //分页切割
         user.favorites.splice(0, skip);
         user.favorites.splice(limit);
+        //排序
+        user.favorites.sort(() => {
+            return sortType;
+        });
 
         const favorites = user.favorites;
         res.status(200).send({
@@ -284,7 +296,9 @@ router.get("/posts/published", async (req, res) => {
           )
         : ""; //搜索关键字,需要转义
     const filter = new RegExp(keyword, "i");
-
+    //获取时序参数
+    const order = String(req.query.order);
+    const sortType = order === "new" ? -1 : 1;
     try {
         const user = await db.user.findById(user_id).populate({
             path: "published",
@@ -305,13 +319,16 @@ router.get("/posts/published", async (req, res) => {
         if (!user) throw "没有找到对应用户";
         //获取总数
         const total = user.published.length;
-        
+
         //过滤收藏的文章
         if (keyword) (user as any).filterPublished(filter);
         //分页切割
         user.published.splice(0, skip);
         user.published.splice(limit);
-
+        //排序
+        user.published.sort(() => {
+            return sortType;
+        });
         const published = user.published;
         res.status(200).send({
             msg: "获取成功",
@@ -411,7 +428,7 @@ router.put("/post/comment/oppose", async (req, res) => {
         const targetPost = await db.post.findById(post_id);
         //遍历查找对应的评论
         let isFindComment = false;
-        
+
         targetPost?.comments.forEach((comment: I_PostComment) => {
             //!注意ObjectId类型不能直接比较,要转换成字符串
             if (comment._id.toString() === comment_id) {
@@ -532,5 +549,3 @@ router.put("/post/unfavorite", async (req, res) => {
         });
     }
 });
-
-
