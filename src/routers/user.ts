@@ -4,7 +4,8 @@ import db from "../tools/db/index.ts";
 import {  tranformAvatarExtend } from "../middlewares/index.ts";
 import { getCurrentTime } from "../tools/time.ts";
 const uploadAvatar = multer({
-    dest: "../public/user_avatar",
+    //这里会自动创建文件夹
+    dest: "../public/user/avatar",
 });
 import { SelectPost } from "../tools/db/models/post/schema/post.ts";
 import { SelectUser } from "../tools/db/models/user/schema/user.ts";
@@ -19,12 +20,12 @@ export const router = express.Router();
 //!注册逻辑
 router.post(
     "/user/register",
+    //single里写前端上传文件时候的name值
     uploadAvatar.single("avatar"),
     tranformAvatarExtend,
     async (req: Request, res: Response) => {
         //组装注册信息
         //处理过后的请求对象
-        // const afterRequest = req as RequestWithAvatar;
         const registerInfo = {
             ...req.body,
             avatar: req.avatar, //这个字段是通过中间件拿到的
