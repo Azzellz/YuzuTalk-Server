@@ -4,6 +4,8 @@ import "./extends/express-request.ts";
 
 import { router as post } from "./routers/post.ts";
 import { router as user } from "./routers/user.ts";
+import { router as test } from "./routers/test.ts";
+
 import {
     CORS,
     checkLoginToken,
@@ -23,13 +25,13 @@ const options = {
 app.use(
     express.json(),
     express.urlencoded({ extended: true }),
-    express.static("../public",options)
+    express.static("../public", options)
 );
 //!跨域中间件必须第一个配置,不然异步中间件可能会提前发送响应
 app.use(CORS, checkLoginToken, errorHandler);
 
 //配置路由器
-app.use("/api", user, post);
+app.use("/api", user, post,test);
 
 app.listen(4000, () => {
     console.log("The server listen on port 4000! ");

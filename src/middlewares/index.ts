@@ -45,7 +45,7 @@ export async function checkLoginToken(
     next();
 }
 //改变经过multer处理的头像文件拓展名
-export function tranformAvatarExtend(
+export function tranformImgExtend(
     req: Request,
     res: Response,
     next: NextFunction
@@ -64,6 +64,7 @@ export function tranformAvatarExtend(
         if (err) return console.log(err);
     });
     req.avatar = `${fileName}.${extendName}`;
+    req.img = `${fileName}.${extendName}`;
     next();
 }
 //配置跨域响应头的中间件

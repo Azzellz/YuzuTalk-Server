@@ -7,6 +7,7 @@ interface RequestWithToken {
 //携带Avatar
 interface RequestWithAvatar {
     avatar?: string;
+    img?:string
 }
 
 //express接口拓展

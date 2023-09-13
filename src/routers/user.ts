@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer"; //解析文件的中间件
 import db from "../tools/db/index.ts";
-import {  tranformAvatarExtend } from "../middlewares/index.ts";
+import { tranformImgExtend } from "../middlewares/index.ts";
 import { getCurrentTime } from "../tools/time.ts";
 const uploadAvatar = multer({
     //这里会自动创建文件夹
@@ -22,7 +22,7 @@ router.post(
     "/user/register",
     //single里写前端上传文件时候的name值
     uploadAvatar.single("avatar"),
-    tranformAvatarExtend,
+    tranformImgExtend,
     async (req: Request, res: Response) => {
         //组装注册信息
         //处理过后的请求对象
