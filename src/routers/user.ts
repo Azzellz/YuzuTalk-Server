@@ -28,7 +28,7 @@ router.post(
         //处理过后的请求对象
         const registerInfo = {
             ...req.body,
-            avatar: req.avatar, //这个字段是通过中间件拿到的
+            avatar: req.img, //这个字段是通过中间件拿到的
         };
 
         try {

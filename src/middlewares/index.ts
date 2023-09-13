@@ -63,7 +63,7 @@ export function tranformImgExtend(
     fs.rename(oldFileName, newFileName, (err) => {
         if (err) return console.log(err);
     });
-    req.avatar = `${fileName}.${extendName}`;
+    //!挂载静态资源文件夹里的文件名,可以选择返回给前端
     req.img = `${fileName}.${extendName}`;
     next();
 }
