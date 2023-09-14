@@ -1,4 +1,4 @@
-import { Document,Types } from "mongoose";
+import { Document, Types } from "mongoose";
 
 // 定义用户类型
 // interface User {
@@ -25,6 +25,7 @@ export interface I_Post extends Document {
     user: Types.ObjectId;
     title: string;
     content: string;
+    preContent: string;
     tags: Array<string>;
     support: number;
     oppose: number;
@@ -40,5 +41,5 @@ export interface I_Post extends Document {
 
 //查询投影
 export interface SelectedProjection {
-    [field: string]: 1|0;
+    [field: string]: 1 | 0;
 }
