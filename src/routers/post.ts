@@ -8,6 +8,8 @@ import {
 
 import { SelectPost } from "../tools/db/models/post/schema/post.ts";
 import { SelectUser } from "../tools/db/models/user/schema/user.ts";
+import { MainPostInfoProjection } from "../tools/db/models/post/schema/post.ts";
+import path from "path";
 
 //TODO:写接口的时候一定要解耦
 
@@ -151,6 +153,7 @@ router.get("/posts", async (req, res) => {
         //find()不传参默认找全部文档
         const posts = await db.post
             .find(filter)
+            .select(MainPostInfoProjection)
             .sort({ time_stamp: sortType })
             .populate([
                 {
@@ -193,6 +196,7 @@ router.get("/posts/latest", async (req, res) => {
         //获取最新的10篇文章,按照每篇文章的时间戳来排序
         const lastestPosts = await db.post
             .find()
+            .select(MainPostInfoProjection)
             .populate([
                 {
                     path: "user",
@@ -242,9 +246,11 @@ router.get("/posts/favorites", async (req, res) => {
     try {
         const user = await db.user.findById(user_id).populate({
             path: "favorites",
+            select: MainPostInfoProjection,
             populate: [
                 {
                     path: "user",
+                    select: SelectUser,
                 },
                 {
                     path: "comments.user",
@@ -302,9 +308,11 @@ router.get("/posts/published", async (req, res) => {
     try {
         const user = await db.user.findById(user_id).populate({
             path: "published",
+            select: MainPostInfoProjection,
             populate: [
                 {
                     path: "user",
+                    select: SelectUser,
                 },
                 {
                     path: "comments.user",

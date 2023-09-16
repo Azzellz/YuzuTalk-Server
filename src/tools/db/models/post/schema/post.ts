@@ -47,7 +47,9 @@ export const Post = new Schema<I_Post>({
     time_stamp: Number, //发布时间戳
 });
 
-//查询投影
+//!查询投影
 export const SelectPost: SelectedProjection = {
     _id: 1,
 };
+//!主要的post信息:要排除正文,因为正文太大了
+export const MainPostInfoProjection = "-content";
